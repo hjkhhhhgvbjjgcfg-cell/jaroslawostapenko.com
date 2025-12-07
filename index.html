@@ -114,6 +114,7 @@
                     <a href="#hero" class="nav-link text-sm font-medium text-slate-200 hover:text-white transition-colors">Start</a>
                     <a href="#about" class="nav-link text-sm font-medium text-slate-200 hover:text-white transition-colors">O mnie</a>
                     <a href="#skills" class="nav-link text-sm font-medium text-slate-200 hover:text-white transition-colors">Umiejętności</a>
+                    <a href="#projects" class="nav-link text-sm font-medium text-slate-200 hover:text-white transition-colors">Projekty</a>
                     <a href="#experience" class="nav-link text-sm font-medium text-slate-200 hover:text-white transition-colors">Doświadczenie</a>
                     <a href="#contact" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-full transition-all hover:shadow-lg hover:-translate-y-0.5">
                         Zatrudnij mnie
@@ -133,6 +134,7 @@
                 <a href="#hero" class="mobile-link text-slate-600 hover:text-blue-600 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">Start</a>
                 <a href="#about" class="mobile-link text-slate-600 hover:text-blue-600 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">O mnie</a>
                 <a href="#skills" class="mobile-link text-slate-600 hover:text-blue-600 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">Umiejętności</a>
+                <a href="#projects" class="mobile-link text-slate-600 hover:text-blue-600 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">Projekty</a>
                 <a href="#experience" class="mobile-link text-slate-600 hover:text-blue-600 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">Doświadczenie</a>
                 <a href="#contact" class="mobile-link text-slate-600 hover:text-blue-600 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">Kontakt</a>
             </nav>
@@ -172,8 +174,8 @@
                                 Skontaktuj się
                                 <i data-lucide="mail" width="18" height="18"></i>
                             </a>
-                            <a href="#experience" class="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all border border-slate-700 hover:border-slate-600">
-                                Moje doświadczenie
+                            <a href="#projects" class="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all border border-slate-700 hover:border-slate-600">
+                                Zobacz moje projekty
                             </a>
                         </div>
 
@@ -436,6 +438,157 @@
                                         <div class="bg-purple-500 h-1.5 rounded-full" style="width: 75%"></div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Projects Section -->
+        <section id="projects" class="py-20 lg:py-32 bg-white border-t border-slate-100">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="mb-16 max-w-2xl">
+                    <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4 tracking-tight">Projekty</h2>
+                    <p class="text-lg text-slate-600 leading-relaxed">Wybrane realizacje, nad którymi pracowałem</p>
+                    <div class="h-1 w-20 bg-blue-600 rounded-full mt-6"></div>
+                </div>
+
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    
+                    <!-- AI Pong Project Card -->
+                    <div class="group bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                        <div class="relative h-48 overflow-hidden">
+                            <div class="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/0 transition-colors z-10"></div>
+                            <!-- Using a specific placeholder for the game -->
+                            <img src="https://picsum.photos/seed/pong/800/600" alt="AI Ping Pong" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500">
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">AI Ping Pong</h3>
+                            <p class="text-slate-600 mb-4 text-sm leading-relaxed">
+                                Interaktywna gra w Ponga z przeciwnikiem AI. Wykorzystuje HTML5 Canvas, system cząsteczek i efekty dźwiękowe.
+                            </p>
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                <span class="px-2.5 py-1 rounded-full bg-yellow-50 text-yellow-600 text-xs font-semibold">JavaScript</span>
+                                <span class="px-2.5 py-1 rounded-full bg-purple-50 text-purple-600 text-xs font-semibold">Canvas API</span>
+                                <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">Game Dev</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <a href="pong.html" target="_blank" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
+                                    <i data-lucide="play" width="16" height="16"></i> Graj
+                                </a>
+                                <a href="pong.html" target="_blank" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
+                                    <i data-lucide="code-2" width="16" height="16"></i> Kod
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Project Card 1 -->
+                    <div class="group bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                        <div class="relative h-48 overflow-hidden">
+                            <div class="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/0 transition-colors z-10"></div>
+                            <img src="https://picsum.photos/seed/project1/800/600" alt="E-Commerce System" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500">
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">System E-Commerce</h3>
+                            <p class="text-slate-600 mb-4 text-sm leading-relaxed">
+                                Kompleksowa platforma sprzedażowa z panelem administratora, koszykiem zakupowym i systemem zarządzania zamówieniami.
+                            </p>
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                <span class="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-semibold">PHP</span>
+                                <span class="px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold">MySQL</span>
+                                <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">Bootstrap</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <a href="#" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
+                                    <i data-lucide="github" width="16" height="16"></i> Kod
+                                </a>
+                                <a href="#" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
+                                    <i data-lucide="external-link" width="16" height="16"></i> Demo
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project Card 2 -->
+                    <div class="group bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                        <div class="relative h-48 overflow-hidden">
+                            <div class="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/0 transition-colors z-10"></div>
+                            <img src="https://picsum.photos/seed/project2/800/600" alt="Portfolio Website" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500">
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">Portfolio Developer</h3>
+                            <p class="text-slate-600 mb-4 text-sm leading-relaxed">
+                                Nowoczesna strona wizytówka (taka jak ta), zoptymalizowana pod kątem SEO i wydajności.
+                            </p>
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                <span class="px-2.5 py-1 rounded-full bg-orange-50 text-orange-600 text-xs font-semibold">HTML5</span>
+                                <span class="px-2.5 py-1 rounded-full bg-cyan-50 text-cyan-600 text-xs font-semibold">Tailwind CSS</span>
+                                <span class="px-2.5 py-1 rounded-full bg-yellow-50 text-yellow-600 text-xs font-semibold">JavaScript</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <a href="#" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
+                                    <i data-lucide="github" width="16" height="16"></i> Kod
+                                </a>
+                                <a href="#" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
+                                    <i data-lucide="external-link" width="16" height="16"></i> Demo
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project Card 3 -->
+                    <div class="group bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                        <div class="relative h-48 overflow-hidden">
+                            <div class="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/0 transition-colors z-10"></div>
+                            <img src="https://picsum.photos/seed/project3/800/600" alt="Weather Dashboard" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500">
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">Dashboard Pogodowy</h3>
+                            <p class="text-slate-600 mb-4 text-sm leading-relaxed">
+                                Aplikacja wykorzystująca zewnętrzne API do wyświetlania prognozy pogody w czasie rzeczywistym.
+                            </p>
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                <span class="px-2.5 py-1 rounded-full bg-yellow-50 text-yellow-600 text-xs font-semibold">JavaScript ES6+</span>
+                                <span class="px-2.5 py-1 rounded-full bg-green-50 text-green-600 text-xs font-semibold">Fetch API</span>
+                                <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">CSS Grid</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <a href="#" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
+                                    <i data-lucide="github" width="16" height="16"></i> Kod
+                                </a>
+                                <a href="#" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
+                                    <i data-lucide="external-link" width="16" height="16"></i> Demo
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project Card 4 -->
+                    <div class="group bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                        <div class="relative h-48 overflow-hidden">
+                            <div class="absolute inset-0 bg-slate-900/10 group-hover:bg-slate-900/0 transition-colors z-10"></div>
+                            <img src="https://picsum.photos/seed/project4/800/600" alt="Task Manager" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500">
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-xl font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors">Task Manager</h3>
+                            <p class="text-slate-600 mb-4 text-sm leading-relaxed">
+                                Interaktywna lista zadań (To-Do) z możliwością kategoryzacji i zapisywania stanu w przeglądarce.
+                            </p>
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                <span class="px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 text-xs font-semibold">React</span>
+                                <span class="px-2.5 py-1 rounded-full bg-purple-50 text-purple-600 text-xs font-semibold">LocalStorage</span>
+                                <span class="px-2.5 py-1 rounded-full bg-cyan-50 text-cyan-600 text-xs font-semibold">Tailwind</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <a href="#" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
+                                    <i data-lucide="github" width="16" height="16"></i> Kod
+                                </a>
+                                <a href="#" class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors">
+                                    <i data-lucide="external-link" width="16" height="16"></i> Demo
+                                </a>
                             </div>
                         </div>
                     </div>

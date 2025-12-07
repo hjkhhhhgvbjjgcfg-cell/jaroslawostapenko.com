@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AI Ping Pong</title>
+    <!-- We will write all our CSS styles here -->
+    <style>
+        /* Basic page reset and setup */
+        :root {
+            --background-color: #1a1a1a;
+            --text-color: #f0f0f0;
+            --accent-color: #00c6ff;
+            --paddle-color: #ffffff;
+            --ball-color: #ffffff;
+            --net-color: #4a4a4a;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Prevents scrollbars */
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        /* Canvas styling */
+        canvas {
+            display: block;
+            background-color: #0d0d0d;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 198, 255, 0.5);
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        /* UI elements styling */
+        #gameUI {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #score {
+            font-size: 3rem;
+            font-weight: bold;
+            letter-spacing: 5px;
+            color: var(--text-color);
+            text-shadow: 0 0 10px var(--accent-color);
+        }
+
+        /* Modal screens (Start, Game Over, Settings) */
+        .modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+            color: white;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background-color: #2a2a2a;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 0 40px rgba(0, 198, 255, 0.7);
+            border: 2px solid var(--accent-color);
+        }
+
+        .modal h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: var(--accent-color);
+        }
+
+        .modal p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+        }
+        
+        /* Author text style */
+        .author {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-top: -15px;
+            margin-bottom: 25px;
+            letter-spacing: 1px;
+        }
+
+        .modal-button {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--accent-color);
+            color: var(--background-color);
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 10px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            margin: 5px;
+            box-shadow: 0 5px 15px rgba(0, 198, 255, 0.4);
+        }
+
+        .modal-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 198, 255, 0.6);
+        }
+        
+        /* Settings specific styles */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .settings-grid label {
+            text-align: right;
+            font-size: 1.1rem;
+        }
+
+        .settings-grid select, .settings-grid input[type="color"] {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #333;
+            color: white;
+            border: 2px solid var(--accent-color);
+            border-radius: 5px;
+            padding: 8px;
+            font-size: 1rem;
+        }
+
+        /* Hide modals by default */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- UI for score display -->
+    <div id="gameUI">
+        <div id="score">0 - 0</div>
+    </div>
+    
+    <!-- Game Canvas -->
+    <canvas id="pongCanvas"></canvas>
+
+    <!-- Start Menu Modal -->
+    <div id="startMenu" class="modal">
+        <div class="modal-content">
+            <h1>AI PONG</h1>
+            <p>Use your finger to control the paddle. First to 10 points wins!</p>
+            <p class="author">Created by Yaroslav Ostapenko</p>
+            <button id="startButton" class="modal-button">Start Game</button>
+            <button id="settingsButton" class="modal-button">Settings</button>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOverMenu" class="modal hidden">
+        <div class="modal-content">
+            <h1 id="gameOverTitle">Game Over</h1>
+            <p id="gameOverMessage">The AI has bested you.</p>
+            <button id="restartButton" class="modal-button">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsMenu" class="modal hidden">
+        <div class="modal-content">
+            <h1>Settings</h1>
+            <div class="settings-grid">
+                <label for="difficulty">AI Difficulty:</label>
+                <select id="difficulty">
+                    <option value="0.04">Easy</option>
+                    <option value="0.07" selected>Medium</option>
+                    <option value="0.1">Hard</option>
+                    <option value="0.15">Impossible</option>
+                </select>
+
+                <label for="paddleColor">Your Paddle Color:</label>
+                <input type="color" id="paddleColor" value="#ffffff">
+
+                <label for="ballColor">Ball Color:</label>
+                <input type="color" id="ballColor" value="#ffffff">
+            </div>
+            <button id="saveSettingsButton" class="modal-button">Save & Close</button>
+        </div>
+    </div>
+    
+    <!-- We will write all our JavaScript game logic here -->
+    <script>
+        //======================================================================
+        // I. SETUP & INITIALIZATION
+        //======================================================================
+
+        const canvas = document.getElementById('pongCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        
+        // UI Modals
+        const startMenu = document.getElementById('startMenu');
+        const gameOverMenu = document.getElementById('gameOverMenu');
+        const settingsMenu = document.getElementById('settingsMenu');
+
+        // UI Buttons
+        const startButton = document.getElementById('startButton');
+        const settingsButton = document.getElementById('settingsButton');
+        const restartButton = document.getElementById('restartButton');
+        const saveSettingsButton = document.getElementById('saveSettingsButton');
+
+        // Game Over screen elements
+        const gameOverTitle = document.getElementById('gameOverTitle');
+        const gameOverMessage = document.getElementById('gameOverMessage');
+        
+        // Settings elements
+        const difficultySelect = document.getElementById('difficulty');
+        const paddleColorInput = document.getElementById('paddleColor');
+        const ballColorInput = document.getElementById('ballColor');
+
+        // Game state
+        let gameRunning = false;
+        let animationFrameId;
+
+        // Game constants
+        const WINNING_SCORE = 10;
+        let PADDLE_HEIGHT = 100;
+        let PADDLE_WIDTH = 10;
+        let BALL_RADIUS = 7;
+        let INITIAL_BALL_SPEED = 5;
+        let PADDLE_MARGIN = 15; // Distance from edge
+
+        // Game objects
+        let player, ai, ball;
+
+        // Particle system for effects
+        let particles = [];
+        
+        // Game settings
+        let settings = {
+            aiLevel: 0.07, // Corresponds to Medium difficulty
+            playerPaddleColor: '#ffffff',
+            ballColor: '#ffffff'
+        };
+
+        //======================================================================
+        // II. GAME OBJECT CLASSES
+        //======================================================================
+
+        /**
+         * Represents a paddle in the game.
+         * @param {number} x - The x-coordinate of the paddle.
+         * @param {number} y - The y-coordinate of the paddle.
+         * @param {number} width - The width of the paddle.
+         * @param {number} height - The height of the paddle.
+         * @param {string} color - The color of the paddle.
+         */
+        class Paddle {
+            constructor(x, y, width, height, color) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.color = color;
+                this.score = 0;
+            }
+
+            // Method to draw the paddle on the canvas
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.roundRect(this.x, this.y, this.width, this.height, 5); // Rounded corners
+                ctx.fill();
+            }
+        }
+
+        /**
+         * Represents the ball in the game.
+         * @param {number} x - The x-coordinate of the ball.
+         * @param {number} y - The y-coordinate of the ball.
+         * @param {number} radius - The radius of the ball.
+         * @param {string} color - The color of the ball.
+         */
+        class Ball {
+            constructor(x, y, radius, color) {
+                this.x = x;
+                this.y = y;
+                this.radius = radius;
+                this.color = color;
+                this.speed = INITIAL_BALL_SPEED;
+                this.speedX = INITIAL_BALL_SPEED;
+                this.speedY = INITIAL_BALL_SPEED;
+            }
+
+            // Method to draw the ball on the canvas
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Method to update the ball's position
+            move() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+            }
+
+            // Method to reset the ball's position and speed after a score
+            reset() {
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                this.speed = INITIAL_BALL_SPEED;
+
+                // Randomize direction
+                let directionX = Math.random() > 0.5 ? 1 : -1;
+                let directionY = (Math.random() * 2 - 1); // Angle between -1 and 1
+                
+                this.speedX = directionX * this.speed;
+                this.speedY = directionY * this.speed;
+            }
+        }
+
+        /**
+         * Represents a single particle for visual effects.
+         * @param {number} x - The starting x-coordinate.
+         * @param {number} y - The starting y-coordinate.
+         * @param {string} color - The color of the particle.
+         */
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.radius = Math.random() * 3 + 1;
+                this.speedX = (Math.random() - 0.5) * 5;
+                this.speedY = (Math.random() - 0.5) * 5;
+                this.life = 100; // Lifespan of the particle in frames
+            }
+
+            // Method to draw the particle
+            draw() {
+                ctx.globalAlpha = this.life / 100;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+
+            // Method to update the particle's state
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life--;
+            }
+        }
+
+
+        //======================================================================
+        // III. CORE GAME LOGIC
+        //======================================================================
+
+        /**
+         * Sets up the initial state of the game.
+         * Resizes canvas and creates game objects.
+         */
+        function initializeGame() {
+            // Adjust canvas to window size
+            resizeCanvas();
+
+            // Create player paddle
+            player = new Paddle(
+                PADDLE_MARGIN, 
+                canvas.height / 2 - PADDLE_HEIGHT / 2, 
+                PADDLE_WIDTH, 
+                PADDLE_HEIGHT, 
+                settings.playerPaddleColor
+            );
+
+            // Create AI paddle
+            ai = new Paddle(
+                canvas.width - PADDLE_WIDTH - PADDLE_MARGIN, 
+                canvas.height / 2 - PADDLE_HEIGHT / 2, 
+                PADDLE_WIDTH, 
+                PADDLE_HEIGHT, 
+                '#ffffff'
+            );
+
+            // Create the ball
+            ball = new Ball(
+                canvas.width / 2, 
+                canvas.height / 2, 
+                BALL_RADIUS, 
+                settings.ballColor
+            );
+
+            // Reset scores
+            player.score = 0;
+            ai.score = 0;
+            updateScore();
+            ball.reset();
+        }
+        
+        /**
+         * The main game loop, called for each frame of the animation.
+         */
+        function gameLoop() {
+            if (!gameRunning) return;
+
+            // 1. Update game objects
+            update();
+
+            // 2. Draw everything
+            draw();
+
+            // 3. Request the next frame
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        /**
+         * Updates the state of all game objects.
+         */
+        function update() {
+            // Move the ball
+            ball.move();
+
+            // Update AI paddle position
+            aiLogic();
+            
+            // Update particles
+            updateParticles();
+
+            // Check for collisions
+            handleCollisions();
+        }
+        
+        /**
+         * Draws all game objects and UI onto the canvas.
+         */
+        function draw() {
+            // Clear the canvas with a slight transparent overlay for motion blur effect
+            ctx.fillStyle = 'rgba(13, 13, 13, 0.4)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the center net
+            drawNet();
+
+            // Draw paddles and ball
+            player.draw();
+            ai.draw();
+            ball.draw();
+            
+            // Draw particles
+            drawParticles();
+        }
+        
+        /**
+         * Contains the logic for the AI opponent's movement.
+         */
+        function aiLogic() {
+            // A simple but effective AI: it tries to center its paddle on the ball's y-position.
+            // The `aiLevel` variable determines how quickly it reacts.
+            let paddleCenter = ai.y + ai.height / 2;
+            let distance = ball.y - paddleCenter;
+
+            // Move AI paddle
+            ai.y += distance * settings.aiLevel;
+            
+            // Prevent AI paddle from going off-screen
+            if (ai.y < 0) {
+                ai.y = 0;
+            }
+            if (ai.y + ai.height > canvas.height) {
+                ai.y = canvas.height - ai.height;
+            }
+        }
+        
+        /**
+         * Handles all collision detection for the game.
+         */
+        function handleCollisions() {
+            // 1. Collision with top and bottom walls
+            if (ball.y + ball.radius >= canvas.height || ball.y - ball.radius <= 0) {
+                ball.speedY = -ball.speedY;
+                playSound('wall');
+            }
+
+            // 2. Collision with paddles
+            let paddleToCollide = (ball.x < canvas.width / 2) ? player : ai;
+
+            if (isColliding(ball, paddleToCollide)) {
+                // Calculate where the ball hit the paddle
+                let collidePoint = ball.y - (paddleToCollide.y + paddleToCollide.height / 2);
+                collidePoint = collidePoint / (paddleToCollide.height / 2); // Normalize to -1 to 1
+
+                // Calculate the angle of reflection
+                let angleRad = collidePoint * (Math.PI / 4); // Max angle of 45 degrees
+
+                // Determine direction based on which paddle was hit
+                let direction = (ball.x < canvas.width / 2) ? 1 : -1;
+
+                // Update ball's velocity
+                ball.speedX = direction * ball.speed * Math.cos(angleRad);
+                ball.speedY = ball.speed * Math.sin(angleRad);
+
+                // Increase ball speed slightly on each hit to raise difficulty
+                ball.speed += 0.2;
+
+                // Create particle explosion effect
+                createParticles(ball.x, ball.y, paddleToCollide.color);
+                playSound('paddle');
+            }
+
+            // 3. Scoring (ball goes off left or right edge)
+            if (ball.x - ball.radius < 0) {
+                // AI scores
+                ai.score++;
+                playSound('score');
+                checkForWinner();
+                ball.reset();
+            } else if (ball.x + ball.radius > canvas.width) {
+                // Player scores
+                player.score++;
+                playSound('score');
+                checkForWinner();
+                ball.reset();
+            }
+        }
+        
+        /**
+         * Helper function to check for rectangle-circle collision.
+         * @param {Ball} circle - The ball object.
+         * @param {Paddle} rect - The paddle object.
+         * @returns {boolean} - True if they are colliding, false otherwise.
+         */
+        function isColliding(circle, rect) {
+            // Find the closest point on the paddle to the center of the ball
+            let closestX = clamp(circle.x, rect.x, rect.x + rect.width);
+            let closestY = clamp(circle.y, rect.y, rect.y + rect.height);
+
+            // Calculate the distance between the closest point and the ball's center
+            let distanceX = circle.x - closestX;
+            let distanceY = circle.y - closestY;
+            let distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+
+            // Collision occurs if the distance is less than the ball's radius squared
+            return distanceSquared < (circle.radius * circle.radius);
+        }
+
+        /**
+         * Checks if a player has reached the winning score.
+         */
+        function checkForWinner() {
+            updateScore();
+            if (player.score >= WINNING_SCORE || ai.score >= WINNING_SCORE) {
+                endGame();
+            }
+        }
+        
+        /**
+         * Starts the game.
+         */
+        function startGame() {
+            startMenu.classList.add('hidden');
+            gameOverMenu.classList.add('hidden');
+            initializeGame();
+            gameRunning = true;
+            gameLoop();
+        }
+
+        /**
+         * Ends the game and displays the game over screen.
+         */
+        function endGame() {
+            gameRunning = false;
+            cancelAnimationFrame(animationFrameId);
+
+            if (player.score >= WINNING_SCORE) {
+                gameOverTitle.textContent = "You Win!";
+                gameOverMessage.textContent = "Congratulations, you are the Pong champion!";
+            } else {
+                gameOverTitle.textContent = "Game Over";
+                gameOverMessage.textContent = "The AI has bested you. Try again!";
+            }
+            
+            gameOverMenu.classList.remove('hidden');
+        }
+
+
+        //======================================================================
+        // IV. UI & HELPER FUNCTIONS
+        //======================================================================
+        
+        /**
+         * Resizes the canvas to fit the window while maintaining aspect ratio.
+         */
+        function resizeCanvas() {
+            const aspectRatio = 16 / 9;
+            let newWidth = window.innerWidth * 0.9;
+            let newHeight = window.innerHeight * 0.9;
+
+            if (newWidth / newHeight > aspectRatio) {
+                newWidth = newHeight * aspectRatio;
+            } else {
+                newHeight = newWidth / aspectRatio;
+            }
+
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            
+            // Adjust dynamic game element sizes based on new canvas size
+            PADDLE_HEIGHT = canvas.height * 0.15;
+            PADDLE_WIDTH = canvas.width * 0.015;
+            BALL_RADIUS = canvas.width * 0.01;
+            PADDLE_MARGIN = canvas.width * 0.02;
+            
+            // Re-initialize game elements if game is running to adapt to new size
+            if(gameRunning) {
+                initializeGame();
+            }
+        }
+        
+        /**
+         * Updates the score display on the screen.
+         */
+        function updateScore() {
+            scoreElement.textContent = `${player.score} - ${ai.score}`;
+        }
+        
+        /**
+         * Draws the dashed line in the center of the court.
+         */
+        function drawNet() {
+            ctx.beginPath();
+            ctx.setLineDash([10, 15]); // Dashed line style
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.strokeStyle = '#4a4a4a';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset line dash
+        }
+        
+        /**
+         * Clamps a value between a minimum and maximum.
+         * @param {number} value - The value to clamp.
+         * @param {number} min - The minimum allowed value.
+         * @param {number} max - The maximum allowed value.
+         * @returns {number} - The clamped value.
+         */
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(value, max));
+        }
+
+        /**
+         * Handles player input (touch and mouse).
+         * @param {Event} e - The event object.
+         */
+        function handlePlayerMove(e) {
+            e.preventDefault(); // Prevent scrolling on mobile
+            let rect = canvas.getBoundingClientRect();
+            let touch = e.touches ? e.touches[0] : e;
+            let clientY = touch.clientY;
+            
+            // Calculate the player's paddle position based on input
+            // The position is relative to the canvas
+            player.y = clientY - rect.top - player.height / 2;
+
+            // Constrain paddle movement to the canvas boundaries
+            if (player.y < 0) {
+                player.y = 0;
+            }
+            if (player.y + player.height > canvas.height) {
+                player.y = canvas.height - player.height;
+            }
+        }
+
+        
+        //======================================================================
+        // V. PARTICLE SYSTEM & SOUND
+        //======================================================================
+        
+        /**
+         * Creates a burst of particles at a specific location.
+         * @param {number} x - The x-coordinate for the particle burst.
+         * @param {number} y - The y-coordinate for the particle burst.
+         * @param {string} color - The base color for the particles.
+         */
+        function createParticles(x, y, color) {
+            const particleCount = 20;
+            for (let i = 0; i < particleCount; i++) {
+                particles.push(new Particle(x, y, color));
+            }
+        }
+
+        /**
+         * Updates the state of all active particles.
+         */
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                if (particles[i].life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        /**
+         * Draws all active particles to the canvas.
+         */
+        function drawParticles() {
+            particles.forEach(p => p.draw());
+        }
+        
+        // Simple sound generation using Web Audio API to avoid external files
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        /**
+         * Generates and plays a sound effect.
+         * @param {string} type - The type of sound to play ('paddle', 'wall', 'score').
+         */
+        function playSound(type) {
+            if (!audioContext) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+
+            switch (type) {
+                case 'paddle':
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+                    break;
+                case 'wall':
+                    oscillator.type = 'triangle';
+                    oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+                    break;
+                case 'score':
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
+                    break;
+            }
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.2);
+        }
+
+        
+        //======================================================================
+        // VI. EVENT LISTENERS
+        //======================================================================
+        
+        // Listen for window resize to adjust the canvas
+        window.addEventListener('resize', initializeGame);
+
+        // Player controls
+        canvas.addEventListener('mousemove', handlePlayerMove);
+        canvas.addEventListener('touchmove', handlePlayerMove, { passive: false });
+        
+        // UI Button listeners
+        startButton.addEventListener('click', () => {
+            // Resume audio context on user interaction
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            startGame();
+        });
+        
+        restartButton.addEventListener('click', startGame);
+
+        settingsButton.addEventListener('click', () => {
+            startMenu.classList.add('hidden');
+            settingsMenu.classList.remove('hidden');
+        });
+
+        saveSettingsButton.addEventListener('click', () => {
+            // Apply settings
+            settings.aiLevel = parseFloat(difficultySelect.value);
+            settings.playerPaddleColor = paddleColorInput.value;
+            settings.ballColor = ballColorInput.value;
+
+            // Update objects if game is running
+            if (player) player.color = settings.playerPaddleColor;
+            if (ball) ball.color = settings.ballColor;
+
+            settingsMenu.classList.add('hidden');
+            startMenu.classList.remove('hidden');
+        });
+
+
+        //======================================================================
+        // VII. INITIAL GAME START
+        //======================================================================
+        
+        // Set up the game for the first time on page load
+        initializeGame();
+        draw(); // Draw the initial state (paddles, ball, net)
+
+    </script>
+</body>
+</html>
