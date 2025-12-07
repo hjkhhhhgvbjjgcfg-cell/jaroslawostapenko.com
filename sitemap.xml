@@ -9,7 +9,33 @@
 
 <url>
   <loc>https://jaroslawostapenko.github.io/jaroslawostapenko.com/#about</loc>
-  <lastmod>2025-12-07T15:00:14+00:00</lastmod>
+  <lastmod>2025-12-07T18:31:11+00:00</lastmod>
+  <priority>1.00</priority>
+</url>
+<url>
+  <loc>https://jaroslawostapenko.github.io/jaroslawostapenko.com/pong.html</loc>
+  <lastmod>2025-12-07T18:31:12+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://jaroslawostapenko.github.io/jaroslawostapenko.com/loto.html</loc>
+  <lastmod>2025-12-07T18:31:11+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://jaroslawostapenko.github.io/jaroslawostapenko.com/uno.html</loc>
+  <lastmod>2025-12-07T18:31:12+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://jaroslawostapenko.github.io/jaroslawostapenko.com/taxi.html</loc>
+  <lastmod>2025-12-07T18:31:11+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://jaroslawostapenko.github.io/jaroslawostapenko.com/checkers.html</loc>
+  <lastmod>2025-12-07T18:31:11+00:00</lastmod>
+  <priority>0.80</priority>
 </url>
 
 
