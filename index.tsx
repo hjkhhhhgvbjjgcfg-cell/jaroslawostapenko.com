@@ -1,15 +1,4 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
-}
-
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+// This file is no longer used as the project has been converted to static HTML/CSS/JS.
+// Keeping this file empty prevents the "Could not find root element" error if the build system still tries to load it.
+console.log("Portfolio loaded in static mode.");

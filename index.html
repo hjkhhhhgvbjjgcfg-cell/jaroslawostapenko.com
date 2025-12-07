@@ -1,48 +1,593 @@
 <!DOCTYPE html>
 <html lang="pl">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Yaroslav Ostapenko - Portfolio</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            animation: {
+              blob: "blob 7s infinite",
+            },
+            keyframes: {
+              blob: {
+                "0%": { transform: "translate(0px, 0px) scale(1)" },
+                "33%": { transform: "translate(30px, -50px) scale(1.1)" },
+                "66%": { transform: "translate(-20px, 20px) scale(0.9)" },
+                "100%": { transform: "translate(0px, 0px) scale(1)" },
+              },
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-      body {
-        font-family: 'Inter', sans-serif;
-        scroll-behavior: smooth;
-      }
-      /* Custom scrollbar for better aesthetics */
-      ::-webkit-scrollbar {
-        width: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #f1f1f1;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #3b82f6;
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #2563eb;
-      }
-    </style>
-  <script type="importmap">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles.css">
+<script type="importmap">
 {
   "imports": {
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
-    "react": "https://aistudiocdn.com/react@^19.2.1",
-    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "react": "https://aistudiocdn.com/react@^19.2.1",
+    "react/": "https://aistudiocdn.com/react@^19.2.1/",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
     "vite": "https://aistudiocdn.com/vite@^7.2.6"
   }
 }
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-slate-50 text-slate-900 antialiased">
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+<body class="bg-slate-50 text-slate-900 antialiased font-['Inter']">
+
+    <!-- Header -->
+    <header id="main-header" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-6 bg-transparent">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between">
+                <a href="#" class="flex items-center gap-2 group">
+                    <div class="bg-blue-600 p-2 rounded-lg text-white group-hover:scale-110 transition-transform">
+                        <i data-lucide="code-2" width="24" height="24"></i>
+                    </div>
+                    <span id="logo-text" class="text-xl font-bold tracking-tight text-slate-900 lg:text-white transition-colors">
+                        Yaroslav<span class="text-blue-600">.dev</span>
+                    </span>
+                </a>
+
+                <!-- Desktop Nav -->
+                <nav class="hidden md:flex items-center gap-8">
+                    <a href="#hero" class="nav-link text-sm font-medium text-slate-200 hover:text-white transition-colors">Start</a>
+                    <a href="#about" class="nav-link text-sm font-medium text-slate-200 hover:text-white transition-colors">O mnie</a>
+                    <a href="#skills" class="nav-link text-sm font-medium text-slate-200 hover:text-white transition-colors">Umiejętności</a>
+                    <a href="#experience" class="nav-link text-sm font-medium text-slate-200 hover:text-white transition-colors">Doświadczenie</a>
+                    <a href="#contact" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-full transition-all hover:shadow-lg hover:-translate-y-0.5">
+                        Zatrudnij mnie
+                    </a>
+                </nav>
+
+                <!-- Mobile Menu Button -->
+                <button id="mobile-menu-btn" class="md:hidden p-2 text-slate-600 hover:text-blue-600 transition-colors" aria-label="Toggle menu">
+                    <i data-lucide="menu" id="menu-icon" class="lg:text-white"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Nav -->
+        <div id="mobile-menu" class="hidden md:hidden absolute top-full left-0 right-0 bg-white border-b border-slate-100 shadow-xl transition-all duration-300 origin-top">
+            <nav class="flex flex-col p-4 space-y-4">
+                <a href="#hero" class="mobile-link text-slate-600 hover:text-blue-600 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">Start</a>
+                <a href="#about" class="mobile-link text-slate-600 hover:text-blue-600 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">O mnie</a>
+                <a href="#skills" class="mobile-link text-slate-600 hover:text-blue-600 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">Umiejętności</a>
+                <a href="#experience" class="mobile-link text-slate-600 hover:text-blue-600 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">Doświadczenie</a>
+                <a href="#contact" class="mobile-link text-slate-600 hover:text-blue-600 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">Kontakt</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-grow">
+        <!-- Hero Section -->
+        <section id="hero" class="relative min-h-screen flex items-center pt-20 overflow-hidden bg-slate-900">
+            <!-- Background patterns -->
+            <div class="absolute inset-0 z-0 opacity-20 pointer-events-none">
+                <div class="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+                <div class="absolute top-0 -right-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+                <div class="absolute -bottom-8 left-20 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
+            </div>
+
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div class="space-y-8">
+                        <div class="space-y-4">
+                            <span class="inline-block py-1 px-3 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium tracking-wide">
+                                Dostępny do pracy
+                            </span>
+                            <h1 class="text-5xl sm:text-6xl lg:text-7xl font-bold text-white tracking-tight leading-tight">
+                                Yaroslav <br />
+                                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
+                                    Ostapenko
+                                </span>
+                            </h1>
+                            <p class="text-xl text-slate-300 max-w-lg leading-relaxed">
+                                Full Stack Developer. Ambitny 18-letni programista tworzący nowoczesne rozwiązania webowe.
+                            </p>
+                        </div>
+
+                        <div class="flex flex-wrap gap-4">
+                            <a href="#contact" class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all hover:shadow-lg hover:shadow-blue-600/25 flex items-center gap-2">
+                                Skontaktuj się
+                                <i data-lucide="mail" width="18" height="18"></i>
+                            </a>
+                            <a href="#experience" class="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all border border-slate-700 hover:border-slate-600">
+                                Moje doświadczenie
+                            </a>
+                        </div>
+
+                        <div class="flex items-center gap-6 pt-4 text-slate-400">
+                            <a href="mailto:yaroslav.ostapenko16@gmail.com" class="hover:text-blue-400 transition-colors">
+                                <i data-lucide="mail" width="24" height="24"></i>
+                            </a>
+                            <a href="#" class="hover:text-blue-400 transition-colors">
+                                <i data-lucide="github" width="24" height="24"></i>
+                            </a>
+                            <a href="#" class="hover:text-blue-400 transition-colors">
+                                <i data-lucide="linkedin" width="24" height="24"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="relative hidden lg:block">
+                        <div class="relative w-full aspect-square max-w-md mx-auto">
+                            <div class="absolute inset-0 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-full opacity-20 blur-2xl animate-pulse"></div>
+                            <!-- Placeholder for Profile Image -->
+                            <div class="relative w-full h-full rounded-2xl overflow-hidden border-2 border-slate-700/50 shadow-2xl bg-slate-800 flex items-center justify-center group">
+                                <img src="https://picsum.photos/600/600?grayscale" alt="Yaroslav Ostapenko" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" />
+                                <div class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-900 to-transparent">
+                                    <p class="text-white font-medium text-lg">Full Stack Developer</p>
+                                    <p class="text-slate-400 text-sm">HTML • CSS • JS • PHP</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <a href="#about" class="absolute bottom-10 left-1/2 -translate-x-1/2 text-slate-400 hover:text-white transition-colors animate-bounce" aria-label="Scroll down">
+                <i data-lucide="chevron-down" width="32" height="32"></i>
+            </a>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="py-20 lg:py-32 bg-white">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="mb-16 max-w-2xl">
+                    <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4 tracking-tight">O mnie</h2>
+                    <p class="text-lg text-slate-600 leading-relaxed">Poznaj mnie lepiej</p>
+                    <div class="h-1 w-20 bg-blue-600 rounded-full mt-6"></div>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-12 items-start">
+                    <div class="space-y-6 text-slate-600 text-lg leading-relaxed">
+                        <p>
+                            Jestem ambitnym i zmotywowanym 18-letnim programistą z Ukrainy, obecnie ucze trzeciej klasy technikum. 
+                            Posiadam solidną wiedzę z zakresu technologii webowych oraz praktyczne doświadczenie na stanowisku Full Stack Developer, 
+                            zdobyte podczas praktyk zawodowych.
+                        </p>
+                        <p>
+                            Moim głównym celem jest dalszy rozwój umiejętności w pracy nad innowacyjnymi projektami pod okiem doświadczonych specjalistów. 
+                            Cechuje mnie chęć ciągłego doskonalenia, umiejętność pracy w zespole oraz rozwiązywania problemów.
+                        </p>
+                        
+                        <div class="grid sm:grid-cols-2 gap-6 pt-6">
+                            <div class="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div class="p-2.5 bg-blue-100 text-blue-600 rounded-lg">
+                                    <i data-lucide="map-pin" width="20" height="20"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-slate-500 font-medium">Lokalizacja</p>
+                                    <p class="text-slate-900 font-semibold">Kraków, Małopolskie</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div class="p-2.5 bg-blue-100 text-blue-600 rounded-lg">
+                                    <i data-lucide="calendar" width="20" height="20"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-slate-500 font-medium">Data urodzenia</p>
+                                    <p class="text-slate-900 font-semibold">06.09.2007</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div class="p-2.5 bg-blue-100 text-blue-600 rounded-lg">
+                                    <i data-lucide="globe" width="20" height="20"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-slate-500 font-medium">Języki</p>
+                                    <p class="text-slate-900 font-semibold">Polski (C1), Angielski (B2)</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div class="p-2.5 bg-blue-100 text-blue-600 rounded-lg">
+                                    <i data-lucide="user" width="20" height="20"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-slate-500 font-medium">Status</p>
+                                    <p class="text-slate-900 font-semibold">Uczeń / Stażysta</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="bg-slate-900 rounded-2xl p-8 text-white space-y-8 shadow-2xl">
+                            <h3 class="text-2xl font-bold flex items-center gap-2">
+                                <i data-lucide="award" class="text-yellow-400"></i>
+                                Czym się zajmuję?
+                            </h3>
+                            <ul class="space-y-4">
+                                <li class="flex gap-4">
+                                    <span class="w-2 h-2 mt-2.5 bg-blue-500 rounded-full shrink-0"></span>
+                                    <p class="text-slate-300">Tworzenie responsywnych stron internetowych (RWD) przy użyciu HTML5, CSS3, JavaScript.</p>
+                                </li>
+                                <li class="flex gap-4">
+                                    <span class="w-2 h-2 mt-2.5 bg-blue-500 rounded-full shrink-0"></span>
+                                    <p class="text-slate-300">Projektowanie i wdrażanie relacyjnych baz danych MySQL.</p>
+                                </li>
+                                <li class="flex gap-4">
+                                    <span class="w-2 h-2 mt-2.5 bg-blue-500 rounded-full shrink-0"></span>
+                                    <p class="text-slate-300">Optymalizacja wydajności i utrzymanie kodu w środowisku Git.</p>
+                                </li>
+                                <li class="flex gap-4">
+                                    <span class="w-2 h-2 mt-2.5 bg-blue-500 rounded-full shrink-0"></span>
+                                    <p class="text-slate-300">Współpraca w zespole nad innowacyjnymi rozwiązaniami webowymi.</p>
+                                </li>
+                            </ul>
+                            <div class="pt-4">
+                               <a href="/cv.pdf" download class="inline-flex items-center justify-center w-full py-3 bg-white text-slate-900 font-bold rounded-lg hover:bg-slate-200 transition-colors">
+                                 Pobierz moje CV
+                               </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Skills Section -->
+        <section id="skills" class="py-20 lg:py-32 bg-slate-50">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="mb-16 max-w-2xl">
+                    <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4 tracking-tight">Umiejętności</h2>
+                    <p class="text-lg text-slate-600 leading-relaxed">Technologie i narzędzia, z którymi pracuję</p>
+                    <div class="h-1 w-20 bg-blue-600 rounded-full mt-6"></div>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-12">
+                    
+                    <!-- Frontend & Backend Skills -->
+                    <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                        <h3 class="text-xl font-bold text-slate-800 mb-8 pl-2 border-l-4 border-blue-500">Technologie Webowe</h3>
+                        <div class="space-y-6">
+                            
+                            <!-- Skill Item -->
+                            <div class="skill-item">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-semibold text-slate-700">HTML5</span>
+                                    <span class="text-sm font-bold text-blue-600">90%</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2.5">
+                                    <div class="bg-blue-600 h-2.5 rounded-full" style="width: 90%"></div>
+                                </div>
+                            </div>
+
+                            <div class="skill-item">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-semibold text-slate-700">CSS3</span>
+                                    <span class="text-sm font-bold text-blue-600">85%</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2.5">
+                                    <div class="bg-blue-600 h-2.5 rounded-full" style="width: 85%"></div>
+                                </div>
+                            </div>
+
+                            <div class="skill-item">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-semibold text-slate-700">JavaScript (ES6+)</span>
+                                    <span class="text-sm font-bold text-blue-600">80%</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2.5">
+                                    <div class="bg-blue-600 h-2.5 rounded-full" style="width: 80%"></div>
+                                </div>
+                            </div>
+
+                            <div class="skill-item">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-semibold text-slate-700">React</span>
+                                    <span class="text-sm font-bold text-blue-600">75%</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2.5">
+                                    <div class="bg-blue-600 h-2.5 rounded-full" style="width: 75%"></div>
+                                </div>
+                            </div>
+
+                            <div class="skill-item">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-semibold text-slate-700">MySQL</span>
+                                    <span class="text-sm font-bold text-indigo-600">70%</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2.5">
+                                    <div class="bg-indigo-600 h-2.5 rounded-full" style="width: 70%"></div>
+                                </div>
+                            </div>
+
+                             <div class="skill-item">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-semibold text-slate-700">PHP</span>
+                                    <span class="text-sm font-bold text-indigo-600">60%</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2.5">
+                                    <div class="bg-indigo-600 h-2.5 rounded-full" style="width: 60%"></div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Languages & Tools -->
+                    <div class="space-y-8">
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                             <h3 class="text-xl font-bold text-slate-800 mb-8 pl-2 border-l-4 border-emerald-500">Narzędzia</h3>
+                             <div class="grid grid-cols-2 gap-4">
+                                <div class="p-4 bg-slate-50 rounded-xl text-center border border-slate-100">
+                                    <div class="font-bold text-slate-800 mb-1">Git</div>
+                                    <div class="text-sm text-slate-500">Kontrola wersji</div>
+                                </div>
+                                <div class="p-4 bg-slate-50 rounded-xl text-center border border-slate-100">
+                                    <div class="font-bold text-slate-800 mb-1">Bootstrap</div>
+                                    <div class="text-sm text-slate-500">Framework CSS</div>
+                                </div>
+                             </div>
+                        </div>
+
+                        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
+                            <h3 class="text-xl font-bold text-slate-800 mb-8 pl-2 border-l-4 border-purple-500">Języki Obce</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="font-medium">Ukraiński / Rosyjski</span>
+                                        <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">C2 (Ojczysty)</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 rounded-full h-1.5">
+                                        <div class="bg-purple-500 h-1.5 rounded-full" style="width: 100%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="font-medium">Polski</span>
+                                        <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">C1 (Zaawansowany)</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 rounded-full h-1.5">
+                                        <div class="bg-purple-500 h-1.5 rounded-full" style="width: 90%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="font-medium">Angielski</span>
+                                        <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">B2 (Średniozaawansowany)</span>
+                                    </div>
+                                    <div class="w-full bg-slate-100 rounded-full h-1.5">
+                                        <div class="bg-purple-500 h-1.5 rounded-full" style="width: 75%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- Experience Section -->
+        <section id="experience" class="py-20 lg:py-32 bg-white">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="mb-16 max-w-2xl">
+                    <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4 tracking-tight">Doświadczenie i Edukacja</h2>
+                    <p class="text-lg text-slate-600 leading-relaxed">Moja ścieżka rozwoju zawodowego</p>
+                    <div class="h-1 w-20 bg-blue-600 rounded-full mt-6"></div>
+                </div>
+
+                <div class="max-w-4xl mx-auto">
+                    <div class="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
+                        
+                        <!-- Item 1 -->
+                        <div class="relative flex items-center justify-between md:justify-normal md:flex-row-reverse group">
+                            <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-50 shadow shrink-0 md:order-1 md:-translate-x-1/2">
+                                <i data-lucide="briefcase" width="18" height="18" class="text-blue-600"></i>
+                            </div>
+                            <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-6 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
+                                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-1">
+                                    <h3 class="font-bold text-slate-900 text-lg">Full Stack Developer (Praktykant)</h3>
+                                    <span class="inline-block px-2 py-1 rounded-md bg-slate-100 text-xs font-semibold text-slate-500 whitespace-nowrap">Październik 2024 - Obecnie</span>
+                                </div>
+                                <div class="text-blue-600 font-medium text-sm mb-4">AKTRU sp. z o.o.</div>
+                                <ul class="space-y-2">
+                                    <li class="text-slate-600 text-sm flex items-start gap-2">
+                                        <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>
+                                        <span class="leading-relaxed">Tworzenie i rozwój aplikacji webowych (HTML, CSS, JS, PHP, MySQL).</span>
+                                    </li>
+                                    <li class="text-slate-600 text-sm flex items-start gap-2">
+                                        <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>
+                                        <span class="leading-relaxed">Projektowanie i zarządzanie relacyjnymi bazami danych.</span>
+                                    </li>
+                                    <li class="text-slate-600 text-sm flex items-start gap-2">
+                                        <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>
+                                        <span class="leading-relaxed">Aktywna praca z systemem kontroli wersji Git.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Item 2 -->
+                        <div class="relative flex items-center justify-between md:justify-normal group">
+                            <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-50 shadow shrink-0 md:order-1 md:translate-x-1/2">
+                                <i data-lucide="graduation-cap" width="18" height="18" class="text-emerald-600"></i>
+                            </div>
+                            <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-6 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
+                                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-1">
+                                    <h3 class="font-bold text-slate-900 text-lg">Technik Programista</h3>
+                                    <span class="inline-block px-2 py-1 rounded-md bg-slate-100 text-xs font-semibold text-slate-500 whitespace-nowrap">04.09.2023 - Obecnie</span>
+                                </div>
+                                <div class="text-blue-600 font-medium text-sm mb-4">ZESPÓŁ SZKÓŁ TECHNICZNYCH Chemobudowa-Kraków S.A.</div>
+                                <ul class="space-y-2">
+                                    <li class="text-slate-600 text-sm flex items-start gap-2">
+                                        <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>
+                                        <span class="leading-relaxed">Profil: Programista</span>
+                                    </li>
+                                    <li class="text-slate-600 text-sm flex items-start gap-2">
+                                        <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>
+                                        <span class="leading-relaxed">Nauka zaawansowanych technologii webowych.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                         <!-- Item 3 -->
+                        <div class="relative flex items-center justify-between md:justify-normal md:flex-row-reverse group">
+                            <div class="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-slate-50 shadow shrink-0 md:order-1 md:-translate-x-1/2">
+                                <i data-lucide="graduation-cap" width="18" height="18" class="text-emerald-600"></i>
+                            </div>
+                            <div class="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-6 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-1">
+                                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-1">
+                                    <h3 class="font-bold text-slate-900 text-lg">Liceum Ogólnokształcące</h3>
+                                    <span class="inline-block px-2 py-1 rounded-md bg-slate-100 text-xs font-semibold text-slate-500 whitespace-nowrap">2022 - 2025</span>
+                                </div>
+                                <div class="text-blue-600 font-medium text-sm mb-4">Liceum nr. 3 miasto Mikołajów, Ukraina</div>
+                                <ul class="space-y-2">
+                                    <li class="text-slate-600 text-sm flex items-start gap-2">
+                                        <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>
+                                        <span class="leading-relaxed">Nauczanie online. Profil ogólny z naciskiem na nauki ścisłe.</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="py-20 lg:py-32 bg-slate-50">
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="mb-16 max-w-2xl">
+                    <h2 class="text-3xl sm:text-4xl font-bold text-slate-900 mb-4 tracking-tight">Kontakt</h2>
+                    <p class="text-lg text-slate-600 leading-relaxed">Zainteresowany współpracą? Napisz do mnie.</p>
+                    <div class="h-1 w-20 bg-blue-600 rounded-full mt-6"></div>
+                </div>
+
+                <div class="grid lg:grid-cols-2 gap-12 lg:gap-24">
+                    
+                    <div class="space-y-8">
+                        <div class="prose prose-slate">
+                            <h3 class="text-2xl font-bold text-slate-900 mb-4">Porozmawiajmy o projektach</h3>
+                            <p class="text-slate-600 leading-relaxed">
+                                Szukam możliwości rozwoju jako Full Stack Developer. Jeśli masz pytania dotyczące mojego doświadczenia 
+                                lub chcesz omówić potencjalną współpracę, jestem do dyspozycji.
+                            </p>
+                        </div>
+
+                        <div class="space-y-6">
+                            <a href="mailto:yaroslav.ostapenko16@gmail.com" class="flex items-center gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
+                                <div class="p-3 bg-blue-50 text-blue-600 rounded-lg group-hover:scale-110 transition-transform">
+                                    <i data-lucide="mail" width="24" height="24"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-slate-500">Email</p>
+                                    <p class="text-slate-900 font-semibold">yaroslav.ostapenko16@gmail.com</p>
+                                </div>
+                            </a>
+
+                            <a href="tel:+48513815774" class="flex items-center gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
+                                <div class="p-3 bg-blue-50 text-blue-600 rounded-lg group-hover:scale-110 transition-transform">
+                                    <i data-lucide="phone" width="24" height="24"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-slate-500">Telefon</p>
+                                    <p class="text-slate-900 font-semibold">+48 513 815 774</p>
+                                </div>
+                            </a>
+
+                            <div class="flex items-center gap-4 p-4 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group">
+                                <div class="p-3 bg-blue-50 text-blue-600 rounded-lg group-hover:scale-110 transition-transform">
+                                    <i data-lucide="map-pin" width="24" height="24"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-medium text-slate-500">Lokalizacja</p>
+                                    <p class="text-slate-900 font-semibold">Kraków, Małopolskie</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form -->
+                    <div class="bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
+                        <form id="contact-form" class="space-y-6">
+                            <div class="grid sm:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label for="name" class="text-sm font-medium text-slate-700">Imię</label>
+                                    <input type="text" id="name" required class="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" placeholder="Twoje imię">
+                                </div>
+                                <div class="space-y-2">
+                                    <label for="email" class="text-sm font-medium text-slate-700">Email</label>
+                                    <input type="email" id="email" required class="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" placeholder="twoj@email.com">
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <label for="subject" class="text-sm font-medium text-slate-700">Temat</label>
+                                <input type="text" id="subject" required class="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all" placeholder="W czym mogę pomóc?">
+                            </div>
+
+                            <div class="space-y-2">
+                                <label for="message" class="text-sm font-medium text-slate-700">Wiadomość</label>
+                                <textarea id="message" required rows="4" class="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none" placeholder="Treść wiadomości..."></textarea>
+                            </div>
+
+                            <button type="submit" id="submit-btn" class="w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all bg-blue-600 hover:bg-blue-700 disabled:opacity-70">
+                                <span>Wyślij wiadomość</span>
+                                <i data-lucide="send" width="18" height="18"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-900 py-8 border-t border-slate-800">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-slate-400 text-sm">
+                &copy; 2024 Yaroslav Ostapenko. Wszelkie prawa zastrzeżone.
+            </p>
+            <p class="text-slate-600 text-xs mt-2">
+                Stworzone przy użyciu HTML, Tailwind CSS & JavaScript
+            </p>
+        </div>
+    </footer>
+
+    <!-- Logic Script -->
+    <script src="script.js"></script>
+<script type="module" src="/index.tsx"></script>
+</body>
 </html>
