@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Loto Blast - Mobile</title>
+    
+    <!-- 1. Tailwind CSS for rapid, responsive UI development -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 2. Tone.js for Web Audio sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    
+    <!-- 3. Configuration for Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'loto-blue': '#0A2472',
+                        'loto-purple': '#4E31AA',
+                        'loto-pink': '#A8209F',
+                        'loto-yellow': '#F3C623',
+                        'loto-light': '#F5F5F5',
+                        'loto-gray': '#B0B0B0',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    keyframes: {
+                        // Animation for the balls appearing in the draw
+                        drawBall: {
+                            '0%': { transform: 'scale(0.2) translateY(-100px)', opacity: '0' },
+                            '60%': { transform: 'scale(1.1)', opacity: '1' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        },
+                        // Animation for the user's selected balls
+                        pulse: {
+                            '0%, 100%': { transform: 'scale(1)' },
+                            '50%': { transform: 'scale(1.08)' },
+                        },
+                        // Animation for a winning number match
+                        match: {
+                            '0%': { transform: 'scale(1)', boxShadow: '0 0 0 0 rgba(243, 198, 35, 0.7)' },
+                            '50%': { transform: 'scale(1.15)', boxShadow: '0 0 10px 10px rgba(243, 198, 35, 0)' },
+                            '100%': { transform: 'scale(1.1)', boxShadow: '0 0 0 0 rgba(243, 198, 35, 0)' },
+                        },
+                        // Modal fade-in
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'scale(0.95)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' },
+                        },
+                        // Splash screen title pulse
+                        titlePulse: {
+                            '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+                            '50%': { opacity: '.95', transform: 'scale(1.03)' },
+                        }
+                    },
+                    animation: {
+                        drawBall: 'drawBall 0.5s ease-out forwards',
+                        pulse: 'pulse 1.5s infinite ease-in-out',
+                        match: 'match 0.8s ease-in-out forwards',
+                        fadeIn: 'fadeIn 0.3s ease-out forwards',
+                        titlePulse: 'titlePulse 3s infinite ease-in-out',
+                    },
+                },
+            },
+        };
+    </script>
+    
+    <!-- 4. Custom CSS Styles -->
+    <style>
+        /* Base styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0A2472, #4E31AA);
+            color: #F5F5F5;
+            /* Prevent scrolling and pull-to-refresh on mobile */
+            overscroll-behavior: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            -moz-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Ensure the game container fills the screen */
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Styling for the number grid balls */
+        .number-ball {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px; /* full circle */
+            font-weight: 600;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* State for a selected ball in the grid */
+        .number-ball.selected {
+            background-color: #F3C623; /* loto-yellow */
+            color: #0A2472; /* loto-blue */
+            transform: scale(1.1);
+            border-color: #F3C623;
+            box-shadow: 0 0 15px rgba(243, 198, 35, 0.5);
+        }
+        
+        /* State for a disabled ball (after 6 are picked) */
+        .number-ball.disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Don't disable already selected balls */
+        .number-ball.selected.disabled {
+            opacity: 1;
+        }
+
+        /* Styling for the 6 user-picked balls at the top */
+        .user-pick-ball {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 1.125rem; /* text-lg */
+            background-color: #F5F5F5; /* loto-light */
+            color: #4E31AA; /* loto-purple */
+            border: 2px solid #4E31AA;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            transform: scale(0.95);
+            opacity: 0.8;
+        }
+        
+        .user-pick-ball.filled {
+            transform: scale(1);
+            opacity: 1;
+            border-color: #F3C623;
+            background-color: #F3C623;
+            color: #0A2472;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        
+        /* Styling for the 6 winning draw balls */
+        .draw-ball {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 1.125rem; /* text-lg */
+            background: radial-gradient(circle, #ffffff, #e0e0e0);
+            color: #0A2472;
+            border: 2px solid #B0B0B0;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            visibility: hidden; /* Hidden until animated in */
+        }
+        
+        .draw-ball.visible {
+            visibility: visible;
+        }
+        
+        /* Style for a matched number in the results */
+        .user-pick-ball.matched,
+        .draw-ball.matched {
+            background: #F3C623; /* loto-yellow */
+            color: #0A2472;
+            border-color: #F3C623;
+            animation: match 0.8s ease-in-out forwards !important; /* Override pulse */
+        }
+
+        /* Main action button */
+        .action-button {
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 3px rgba(0, 0, 0, 0.2);
+        }
+        
+        .action-button:disabled {
+            background-color: #B0B0B0; /* loto-gray */
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* Secondary action buttons */
+        .secondary-button {
+            transition: all 0.2s ease;
+        }
+        
+        .secondary-button:active {
+            transform: scale(0.95);
+        }
+
+        /* Custom scrollbar for payout table (if needed) */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #F3C623;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <!-- 
+      ==================================================================
+      GAME CONTAINER
+      This is the root element that holds all screens.
+      ==================================================================
+    -->
+    <div id="game-container" class="relative w-full h-full">
+
+        <!-- 
+          ==================================================================
+          SPLASH SCREEN (Visible by default)
+          ==================================================================
+        -->
+        <div id="splash-screen" class="w-full h-full flex flex-col items-center justify-center p-8 z-30 absolute inset-0 bg-gradient-to-br from-loto-blue to-loto-purple">
+            <h1 class="text-6xl font-bold text-white text-center" style="text-shadow: 0 0 10px #F3C623, 0 0 20px #F3C623;">
+                Loto
+            </h1>
+            <h1 class="text-8xl font-bold text-loto-yellow text-center -mt-4 animate-titlePulse" style="text-shadow: 0 0 10px #F3C623, 0 0 20px #F3C623;">
+                Blast
+            </h1>
+            <p class="text-loto-light text-lg mt-4 text-center">
+                Pick 6 numbers. Win big!
+            </p>
+            <button id="play-button" class="action-button text-2xl font-bold text-loto-blue bg-loto-yellow py-4 px-12 rounded-full mt-16 shadow-xl">
+                Play
+            </button>
+            <p class="text-loto-gray text-xs absolute bottom-4">
+                For entertainment purposes only.
+            </p>
+        </div>
+
+        <!-- 
+          ==================================================================
+          GAME SCREEN (Hidden by default)
+          ==================================================================
+        -->
+        <div id="game-screen" class="hidden w-full h-full flex flex-col p-4 pt-8 z-20 absolute inset-0 overflow-hidden">
+            
+            <!-- Header: Title and Balance -->
+            <header class="flex items-start justify-between w-full flex-shrink-0">
+                <div>
+                    <h1 class="text-3xl font-bold text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Loto Blast</h1>
+                    <!-- Added user credit here -->
+                    <p class="text-xs text-loto-gray mt-1">Created by Yaroslav Ostapenko</p>
+                </div>
+                <div class="bg-black bg-opacity-30 rounded-full px-4 py-2 text-lg font-semibold text-loto-yellow border-2 border-loto-yellow border-opacity-50">
+                    Balance: $<span id="balance-display">100</span>
+                </div>
+            </header>
+
+            <!-- Payout Table (Collapsible) -->
+            <details class="w-full bg-black bg-opacity-20 rounded-lg my-3 flex-shrink-0">
+                <summary class="text-loto-yellow font-semibold p-2 cursor-pointer">
+                    Show Payouts
+                </summary>
+                <div class="p-3 bg-black bg-opacity-10">
+                    <ul class="text-sm">
+                        <li class="flex justify-between"><span class="text-loto-gray">Match 3:</span> <span>$20</span></li>
+                        <li class="flex justify-between"><span class="text-loto-gray">Match 4:</span> <span>$250</span></li>
+                        <li class="flex justify-between"><span class="text-loto-gray">Match 5:</span> <span>$10,000</span></li>
+                        <li class="flex justify-between"><span class="text-loto-gray">Match 6:</span> <span class="font-bold text-loto-yellow">$1,000,000</span></li>
+                    </ul>
+                </div>
+            </details>
+
+            <!-- User's Picked Numbers -->
+            <div class="w-full flex-shrink-0">
+                <h2 class="text-lg font-semibold text-loto-light text-center mb-2">Your 6 Picks</h2>
+                <div id="user-picks-container" class="grid grid-cols-6 gap-2 w-full max-w-md mx-auto">
+                    <!-- JS will generate 6 .user-pick-ball elements here -->
+                </div>
+            </div>
+
+            <!-- Number Grid -->
+            <div class="w-full flex-grow overflow-y-auto my-3">
+                <div id="number-grid-container" class="grid grid-cols-7 gap-1.5 sm:gap-2 max-w-md mx-auto p-2 bg-black bg-opacity-20 rounded-lg">
+                    <!-- JS will generate 49 .number-ball elements here -->
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="w-full flex-shrink-0 max-w-md mx-auto">
+                <div class="flex justify-between items-center space-x-2 mb-2">
+                    <button id="clear-button" class="secondary-button w-1/2 bg-loto-pink text-white py-3 rounded-lg font-semibold">
+                        Clear
+                    </button>
+                    <button id="quick-pick-button" class="secondary-button w-1/2 bg-loto-pink text-white py-3 rounded-lg font-semibold">
+                        Quick Pick
+                    </button>
+                </div>
+                
+                <!-- This button changes to "Draw Numbers" -->
+                <button id="main-action-button" class="action-button w-full bg-loto-yellow text-loto-blue text-2xl font-bold py-4 rounded-lg">
+                    Buy Ticket ($5)
+                </button>
+            </div>
+            
+            <!-- Draw Area (Initially hidden, appears on results screen) -->
+            <div id="draw-area" class="hidden absolute inset-0 z-40 bg-gradient-to-br from-loto-blue to-loto-purple p-8 flex flex-col items-center justify-center">
+                <h2 id="draw-title" class="text-4xl font-bold text-loto-yellow mb-8 animate-pulse">
+                    Drawing Numbers...
+                </h2>
+                <div id="draw-balls-container" class="grid grid-cols-3 gap-4 w-full max-w-xs mx-auto">
+                    <!-- JS will generate 6 .draw-ball elements here -->
+                </div>
+            </div>
+
+        </div> <!-- End #game-screen -->
+
+        <!-- 
+          ==================================================================
+          RESULTS MODAL (Hidden by default)
+          ==================================================================
+        -->
+        <div id="results-modal-overlay" class="hidden absolute inset-0 w-full h-full bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+            <div id="results-modal-content" class="bg-loto-light text-loto-blue w-full max-w-md rounded-2xl p-6 shadow-2xl animate-fadeIn">
+                
+                <h2 id="results-title" class="text-3xl font-bold text-center mb-4">
+                    <!-- JS: "You Won!" or "Try Again!" -->
+                </h2>
+                <p id="results-winnings" class="text-5xl font-bold text-center text-loto-purple mb-6">
+                    <!-- JS: "$1,000,000" -->
+                </p>
+
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="font-semibold text-loto-gray text-center mb-2">Winning Numbers</h3>
+                        <div id="results-winning-balls" class="grid grid-cols-6 gap-2">
+                            <!-- JS will copy .draw-ball elements here -->
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-semibold text-loto-gray text-center mb-2">Your Numbers</h3>
+                        <div id="results-user-balls" class="grid grid-cols-6 gap-2">
+                            <!-- JS will copy .user-pick-ball elements here -->
+                        </div>
+                    </div>
+                </div>
+
+                <p id="results-match-count" class="text-lg font-semibold text-center text-loto-purple mt-6">
+                    <!-- JS: "You matched 6 number[s]!" -->
+                </p>
+
+                <button id="play-again-button" class="action-button w-full bg-loto-purple text-white text-xl font-bold py-4 rounded-lg mt-6">
+                    Play Again
+                </button>
+            </div>
+        </div>
+
+    </div> <!-- End #game-container -->
+
+
+    <!-- 
+      ==================================================================
+      ==================================================================
+      JAVASCRIPT GAME LOGIC
+      ==================================================================
+      ==================================================================
+    -->
+    <script>
+        // Wait for the DOM to be fully loaded before running game logic
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // ===================================
+            // A. GAME CONSTANTS
+            // ===================================
+            const MAX_PICKS = 6;
+            const MAX_NUMBER = 49;
+            const TICKET_COST = 5;
+            const STARTING_BALANCE = 100;
+            const DRAW_ANIMATION_DELAY = 500; // ms between each ball draw
+            
+            // Payout structure: { matches: payout }
+            const PAYOUTS = {
+                3: 20,
+                4: 250,
+                5: 10000,
+                6: 1000000,
+            };
+
+            // Game states
+            const GAME_STATE = {
+                PICKING: 'PICKING',     // User is selecting numbers
+                TICKET_BOUGHT: 'BOUGHT', // User has paid, ready to draw
+                DRAWING: 'DRAWING',   // Draw animation is in progress
+                RESULTS: 'RESULTS',   // Results modal is shown
+            };
+
+            // ===================================
+            // B. GAME STATE VARIABLES
+            // ===================================
+            let currentBalance = STARTING_BALANCE;
+            let currentState = GAME_STATE.PICKING;
+            let userPicks = [];         // Array of numbers (e.g., [5, 12, 23, 30, 41, 49])
+            let currentTicket = [];     // The user's picks, locked in after buying
+            let winningNumbers = [];    // The 6 randomly drawn winning numbers
+
+            // ===================================
+            // C. SOUND SYNTHESIZERS (using Tone.js)
+            // ===================================
+            let soundsReady = false;
+
+            // Using simple synths to avoid external file loads
+            const clickSound = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+            
+            const pickSound = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 }
+            }).toDestination();
+            
+            const unpickSound = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 }
+            }).toDestination();
+            
+            const drawBallSound = new Tone.MembraneSynth({
+                pitchDecay: 0.01,
+                octaves: 6,
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.001, decay: 0.2, sustain: 0.01, release: 0.1 }
+            }).toDestination();
+            
+            const winSound = new Tone.Sequence((time, note) => {
+                pickSound.triggerAttackRelease(note, '8n', time);
+            }, ['C4', 'E4', 'G4', 'C5'], '4n');
+            
+            const jackpotSound = new Tone.Sequence((time, note) => {
+                pickSound.triggerAttackRelease(note, '8n', time);
+            }, ['C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'], '8n');
+
+            const loseSound = new Tone.Sequence((time, note) => {
+                pickSound.triggerAttackRelease(note, '8n', time);
+            }, ['C4', 'B3', 'A#3', 'A3'], '4n');
+            
+            Tone.Transport.start();
+
+            // Function to safely play sounds only after user interaction
+            async function initializeAudio() {
+                if (soundsReady) return;
+                try {
+                    await Tone.start();
+                    console.log('Audio Context started successfully.');
+                    soundsReady = true;
+                } catch (e) {
+                    console.error('Audio Context could not be started:', e);
+                }
+            }
+
+            // ===================================
+            // D. DOM ELEMENT REFERENCES
+            // ===================================
+            const splashScreen = document.getElementById('splash-screen');
+            const gameScreen = document.getElementById('game-screen');
+            const playButton = document.getElementById('play-button');
+            const balanceDisplay = document.getElementById('balance-display');
+            const userPicksContainer = document.getElementById('user-picks-container');
+            const numberGridContainer = document.getElementById('number-grid-container');
+            const clearButton = document.getElementById('clear-button');
+            const quickPickButton = document.getElementById('quick-pick-button');
+            const mainActionButton = document.getElementById('main-action-button');
+            
+            // Draw Area Elements
+            const drawArea = document.getElementById('draw-area');
+            const drawTitle = document.getElementById('draw-title');
+            const drawBallsContainer = document.getElementById('draw-balls-container');
+
+            // Results Modal Elements
+            const resultsModalOverlay = document.getElementById('results-modal-overlay');
+            const resultsModalContent = document.getElementById('results-modal-content');
+            const resultsTitle = document.getElementById('results-title');
+            const resultsWinnings = document.getElementById('results-winnings');
+            const resultsWinningBalls = document.getElementById('results-winning-balls');
+            const resultsUserBalls = document.getElementById('results-user-balls');
+            const resultsMatchCount = document.getElementById('results-match-count');
+            const playAgainButton = document.getElementById('play-again-button');
+
+
+            // ===================================
+            // E. CORE GAME FUNCTIONS
+            // ===================================
+
+            /**
+             * Initializes the game when the script loads.
+             * Sets up the number grid and user pick placeholders.
+             */
+            function init() {
+                console.log('Initializing Loto Blast...');
+                updateBalanceUI();
+                createNumberGrid();
+                createUserPickPlaceholders();
+
+                // Add main event listeners
+                playButton.addEventListener('click', startGame);
+                numberGridContainer.addEventListener('click', handleGridClick);
+                clearButton.addEventListener('click', handleClearPicks);
+                quickPickButton.addEventListener('click', handleQuickPick);
+                mainActionButton.addEventListener('click', handleMainAction);
+                playAgainButton.addEventListener('click', handlePlayAgain);
+            }
+
+            /**
+             * Starts the game: Hides splash, shows main game screen.
+             */
+            async function startGame() {
+                await initializeAudio(); // Ensure audio is ready on first interaction
+                if (soundsReady) clickSound.triggerAttackRelease('C4', '0.1');
+                
+                splashScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+                gameScreen.classList.add('flex');
+            }
+            
+            /**
+             * Dynamically creates the 49 number balls in the grid.
+             */
+            function createNumberGrid() {
+                numberGridContainer.innerHTML = ''; // Clear existing
+                for (let i = 1; i <= MAX_NUMBER; i++) {
+                    const ball = document.createElement('div');
+                    ball.className = 'number-ball w-10 h-10 sm:w-12 sm:h-12 text-sm sm:text-base';
+                    ball.textContent = i;
+                    ball.dataset.number = i; // Store number in data attribute
+                    numberGridContainer.appendChild(ball);
+                }
+            }
+            
+            /**
+             * Dynamically creates the 6 placeholder balls for the user's picks.
+             */
+            function createUserPickPlaceholders() {
+                userPicksContainer.innerHTML = ''; // Clear existing
+                for (let i = 0; i < MAX_PICKS; i++) {
+                    const ball = document.createElement('div');
+                    // Use aspect-ratio to maintain circle shape
+                    ball.className = 'user-pick-ball w-full aspect-square';
+                    ball.textContent = '?';
+                    userPicksContainer.appendChild(ball);
+                }
+            }
+
+            /**
+             * Updates the 6 placeholder balls with the user's current picks.
+             */
+            function updateUserPicksUI() {
+                const pickBalls = userPicksContainer.children;
+                for (let i = 0; i < MAX_PICKS; i++) {
+                    const ball = pickBalls[i];
+                    if (userPicks[i]) {
+                        ball.textContent = userPicks[i];
+                        ball.classList.add('filled');
+                    } else {
+                        ball.textContent = '?';
+                        ball.classList.remove('filled');
+                    }
+                }
+            }
+
+            /**
+             * Updates the main balance display.
+             */
+            function updateBalanceUI() {
+                balanceDisplay.textContent = currentBalance;
+            }
+
+            /**
+             * Updates the state of the number grid (disabling unselected balls).
+             */
+            function updateNumberGridState() {
+                const isMaxPicked = (userPicks.length === MAX_PICKS);
+                const allBalls = numberGridContainer.querySelectorAll('.number-ball');
+                
+                allBalls.forEach(ball => {
+                    if (isMaxPicked && !ball.classList.contains('selected')) {
+                        ball.classList.add('disabled');
+                    } else {
+                        ball.classList.remove('disabled');
+                    }
+                });
+            }
+            
+            /**
+             * Updates the main action button based on game state.
+             */
+            function updateMainActionButton() {
+                if (currentState === GAME_STATE.PICKING) {
+                    mainActionButton.textContent = `Buy Ticket ($${TICKET_COST})`;
+                    // Enable button only if 6 numbers are picked
+                    mainActionButton.disabled = (userPicks.length !== MAX_PICKS);
+                } else if (currentState === GAME_STATE.TICKET_BOUGHT) {
+                    mainActionButton.textContent = 'Draw Numbers!';
+                    mainActionButton.disabled = false;
+                } else if (currentState === GAME_STATE.DRAWING) {
+                    mainActionButton.textContent = 'Drawing...';
+                    mainActionButton.disabled = true;
+                }
+            }
+            
+            /**
+             * Toggles all controls on/off during drawing or results.
+             */
+            function setControlsDisabled(isDisabled) {
+                clearButton.disabled = isDisabled;
+                quickPickButton.disabled = isDisabled;
+                mainActionButton.disabled = isDisabled;
+                
+                // Disable number grid
+                if (isDisabled) {
+                    numberGridContainer.style.pointerEvents = 'none';
+                    numberGridContainer.style.opacity = '0.5';
+                } else {
+                    numberGridContainer.style.pointerEvents = 'auto';
+                    numberGridContainer.style.opacity = '1';
+                }
+            }
+
+            // ===================================
+            // F. EVENT HANDLERS
+            // ===================================
+
+            /**
+             * Handles clicks on the number grid using event delegation.
+             */
+            function handleGridClick(e) {
+                if (currentState !== GAME_STATE.PICKING) return;
+
+                const clickedBall = e.target.closest('.number-ball');
+                if (!clickedBall) return; // Clicked on grid gap
+                
+                const number = parseInt(clickedBall.dataset.number, 10);
+                
+                // Check if number is already picked
+                const pickIndex = userPicks.indexOf(number);
+                
+                if (pickIndex > -1) {
+                    // --- UN-PICK NUMBER ---
+                    userPicks.splice(pickIndex, 1);
+                    clickedBall.classList.remove('selected');
+                    if (soundsReady) unpickSound.triggerAttackRelease('C4', '0.1');
+                } else {
+                    // --- PICK NUMBER ---
+                    if (userPicks.length < MAX_PICKS) {
+                        userPicks.push(number);
+                        userPicks.sort((a, b) => a - b); // Keep picks sorted
+                        clickedBall.classList.add('selected');
+                        if (soundsReady) pickSound.triggerAttackRelease('E4', '0.1');
+                    } else {
+                        // Max numbers already picked
+                        if (soundsReady) clickSound.triggerAttackRelease('A2', '0.1');
+                    }
+                }
+                
+                // Update UI
+                updateUserPicksUI();
+                updateNumberGridState();
+                updateMainActionButton();
+            }
+
+            /**
+             * Clears all selected numbers.
+             */
+            function handleClearPicks() {
+                if (currentState !== GAME_STATE.PICKING) return;
+                if (soundsReady) clickSound.triggerAttackRelease('C4', '0.1');
+
+                userPicks = [];
+                
+                // Update UI
+                const allBalls = numberGridContainer.querySelectorAll('.number-ball');
+                allBalls.forEach(ball => ball.classList.remove('selected'));
+                
+                updateUserPicksUI();
+                updateNumberGridState();
+                updateMainActionButton();
+            }
+
+            /**
+             * Selects 6 random numbers for the user.
+             */
+            function handleQuickPick() {
+                if (currentState !== GAME_STATE.PICKING) return;
+                if (soundsReady) clickSound.triggerAttackRelease('G4', '0.1');
+                
+                handleClearPicks(); // Start fresh
+                
+                while(userPicks.length < MAX_PICKS) {
+                    const randomNum = Math.floor(Math.random() * MAX_NUMBER) + 1;
+                    if (userPicks.indexOf(randomNum) === -1) {
+                        userPicks.push(randomNum);
+                        
+                        // Highlight the ball in the grid
+                        const ball = numberGridContainer.querySelector(`.number-ball[data-number="${randomNum}"]`);
+                        if (ball) ball.classList.add('selected');
+                    }
+                }
+                
+                userPicks.sort((a, b) => a - b);
+                
+                // Update UI
+                updateUserPicksUI();
+                updateNumberGridState();
+                updateMainActionButton();
+            }
+
+            /**
+             * Handles the main action button ("Buy Ticket" or "Draw Numbers").
+             */
+            function handleMainAction() {
+                if (soundsReady) clickSound.triggerAttackRelease('C5', '0.1');
+
+                if (currentState === GAME_STATE.PICKING) {
+                    // --- BUY TICKET ---
+                    buyTicket();
+                } else if (currentState === GAME_STATE.TICKET_BOUGHT) {
+                    // --- START DRAW ---
+                    startDraw();
+                }
+            }
+
+            /**
+             * Handles "Play Again" button in the results modal.
+             */
+            function handlePlayAgain() {
+                if (soundsReady) clickSound.triggerAttackRelease('C4', '0.1');
+                resetForNewGame();
+            }
+
+            // ===================================
+            // G. GAME LOGIC FLOW
+            // ===================================
+
+            /**
+             * Logic for buying a ticket.
+             */
+            function buyTicket() {
+                // 1. Validate
+                if (userPicks.length !== MAX_PICKS) {
+                    console.error('Not enough numbers picked.');
+                    return;
+                }
+                if (currentBalance < TICKET_COST) {
+                    console.error('Not enough balance.');
+                    // TODO: Show a "low balance" message
+                    if (soundsReady) loseSound.start();
+                    return;
+                }
+                
+                // 2. Deduct cost and update balance
+                currentBalance -= TICKET_COST;
+                updateBalanceUI();
+                
+                // 3. Lock in the user's ticket
+                currentTicket = [...userPicks];
+                
+                // 4. Update game state and UI
+                currentState = GAME_STATE.TICKET_BOUGHT;
+                setControlsDisabled(true); // Disable grid/clear/quick pick
+                updateMainActionButton();  // Button now says "Draw Numbers!"
+                mainActionButton.disabled = false; // Ensure it's enabled
+            }
+
+            /**
+             * Generates winning numbers and starts the animation.
+             */
+            function startDraw() {
+                currentState = GAME_STATE.DRAWING;
+                updateMainActionButton(); // Button says "Drawing..."
+                
+                // 1. Generate 6 unique winning numbers
+                winningNumbers = [];
+                while(winningNumbers.length < MAX_PICKS) {
+                    const randomNum = Math.floor(Math.random() * MAX_NUMBER) + 1;
+                    if (winningNumbers.indexOf(randomNum) === -1) {
+                        winningNumbers.push(randomNum);
+                    }
+                }
+                winningNumbers.sort((a, b) => a - b);
+                
+                console.log('User Ticket:', currentTicket);
+                console.log('Winning Numbers:', winningNumbers);
+
+                // 2. Prepare and show the draw area
+                prepareDrawArea();
+                drawArea.classList.remove('hidden');
+                drawArea.classList.add('flex');
+                
+                // 3. Start the animation sequence
+                animateDraw(0);
+            }
+            
+            /**
+             * Prepares the draw area by creating 6 hidden balls.
+             */
+            function prepareDrawArea() {
+                drawBallsContainer.innerHTML = '';
+                for (let i = 0; i < MAX_PICKS; i++) {
+                    const ball = document.createElement('div');
+                    // Use aspect-ratio to maintain circle shape
+                    ball.className = 'draw-ball w-full aspect-square';
+                    ball.textContent = winningNumbers[i];
+                    drawBallsContainer.appendChild(ball);
+                }
+            }
+
+            /**
+             * Animates the draw, one ball at a time (recursive).
+             */
+            function animateDraw(ballIndex) {
+                if (ballIndex >= MAX_PICKS) {
+                    // All balls drawn, calculate results
+                    setTimeout(calculateResults, 1000); // Wait 1 sec
+                    return;
+                }
+
+                // Get the ball for this index
+                const ball = drawBallsContainer.children[ballIndex];
+                
+                // Reveal the ball with animation
+                ball.classList.add('visible');
+                ball.style.animation = 'drawBall 0.5s ease-out forwards';
+                
+                // Play draw sound
+                if (soundsReady) drawBallSound.triggerAttackRelease('C3', '0.2');
+                
+                // Schedule the next ball
+                setTimeout(() => {
+                    animateDraw(ballIndex + 1);
+                }, DRAW_ANIMATION_DELAY);
+            }
+            
+            /**
+             * Calculates results after the draw.
+             */
+            function calculateResults() {
+                drawTitle.textContent = 'Results!';
+
+                // 1. Find matches
+                let matchCount = 0;
+                let matchedNumbers = [];
+                
+                currentTicket.forEach(userNum => {
+                    if (winningNumbers.includes(userNum)) {
+                        matchCount++;
+                        matchedNumbers.push(userNum);
+                    }
+                });
+                
+                // 2. Determine payout
+                const payout = PAYOUTS[matchCount] || 0;
+                
+                // 3. Update balance
+                currentBalance += payout;
+                updateBalanceUI();
+                
+                // 4. Update game state
+                currentState = GAME_STATE.RESULTS;
+                
+                // 5. Show the results modal after a short delay
+                setTimeout(() => {
+                    showResultsModal(matchCount, payout, matchedNumbers);
+                }, 1000);
+            }
+
+            /**
+             * Populates and displays the final results modal.
+             */
+            function showResultsModal(matchCount, payout, matchedNumbers) {
+                // 1. Hide the draw screen
+                drawArea.classList.add('hidden');
+                drawArea.classList.remove('flex');
+                
+                // 2. Populate modal content
+                if (payout > 0) {
+                    resultsTitle.textContent = 'You Won!';
+                    resultsWinnings.textContent = `$${payout.toLocaleString()}`;
+                    if (matchCount === 6) {
+                        if (soundsReady) jackpotSound.start();
+                    } else {
+                        if (soundsReady) winSound.start();
+                    }
+                } else {
+                    resultsTitle.textContent = 'Try Again!';
+                    resultsWinnings.textContent = '$0';
+                    if (soundsReady) loseSound.start();
+                }
+                
+                resultsMatchCount.textContent = `You matched ${matchCount} number${matchCount !== 1 ? 's' : ''}!`;
+
+                // 3. Populate and highlight balls
+                resultsWinningBalls.innerHTML = '';
+                resultsUserBalls.innerHTML = '';
+
+                // Create winning balls
+                winningNumbers.forEach(num => {
+                    const ball = document.createElement('div');
+                    ball.className = 'draw-ball visible w-full aspect-square !text-base';
+                    ball.textContent = num;
+                    if (matchedNumbers.includes(num)) {
+                        ball.classList.add('matched');
+                    }
+                    resultsWinningBalls.appendChild(ball);
+                });
+                
+                // Create user balls
+                currentTicket.forEach(num => {
+                    const ball = document.createElement('div');
+                    ball.className = 'user-pick-ball filled w-full aspect-square !text-base';
+                    ball.textContent = num;
+                    if (matchedNumbers.includes(num)) {
+                        ball.classList.add('matched');
+                    }
+                    resultsUserBalls.appendChild(ball);
+                });
+
+                // 4. Show the modal
+                resultsModalOverlay.classList.remove('hidden');
+                resultsModalOverlay.classList.add('flex');
+            }
+
+            /**
+             * Resets the game state for a new round.
+             */
+            function resetForNewGame() {
+                // 1. Hide modal
+                resultsModalOverlay.classList.add('hidden');
+                resultsModalOverlay.classList.remove('flex');
+                
+                // 2. Reset game variables
+                userPicks = [];
+                currentTicket = [];
+                winningNumbers = [];
+                currentState = GAME_STATE.PICKING;
+                
+                // 3. Reset UI
+                handleClearPicks(); // Clears grid and user picks UI
+                setControlsDisabled(false); // Re-enable grid etc.
+                
+                // 4. Reset draw area (for next round)
+                drawTitle.textContent = 'Drawing Numbers...';
+                drawBallsContainer.innerHTML = '';
+            }
+
+            // ===================================
+            // H. START THE GAME
+            // ===================================
+            init();
+
+        }); // End DOMContentLoaded
+    </script>
+    
+</body>
+</html>

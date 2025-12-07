@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Russian Checkers AI</title>
+    <style>
+        /* --- Root Variables & Global Styles --- */
+        :root {
+            --board-size: min(95vw, 95vh, 640px);
+            --square-size: calc(var(--board-size) / 8);
+            --piece-size: calc(var(--square-size) * 0.8);
+            --king-crown-size: calc(var(--piece-size) * 0.5);
+
+            --color-light-square: #f0d9b5;
+            --color-dark-square: #b58863;
+            
+            --color-player1: #ffffff; /* Human/White */
+            --color-player1-king: #f8f8f8;
+            --color-player1-border: #333333;
+
+            --color-player2: #2c2c2c; /* AI/Black */
+            --color-player2-king: #3a3a3a;
+            --color-player2-border: #cccccc;
+
+            --color-selected: rgba(75, 160, 255, 0.7);
+            --color-valid-move: rgba(46, 204, 113, 0.5);
+            --color-capture-hint: rgba(231, 76, 60, 0.5);
+            --color-last-move: rgba(241, 196, 15, 0.5);
+            --color-background: #312e2b;
+            --color-text: #e0e0e0;
+            --color-modal-bg: rgba(0, 0, 0, 0.8);
+            --color-gemini-accent: #4285F4;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--color-background);
+            font-family: var(--font-family);
+            color: var(--color-text);
+            -webkit-tap-highlight-color: transparent; /* Disable tap highlight on mobile */
+        }
+
+        /* --- Main Game Container --- */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* --- Game Info Panel --- */
+        .info-panel {
+            width: var(--board-size);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 8px;
+            box-sizing: border-box;
+            font-size: clamp(1rem, 4vw, 1.25rem);
+        }
+
+        .player-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .player-info.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 10px var(--color-selected);
+        }
+
+        .player-info .piece-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid;
+        }
+
+        .player-info#player1-info .piece-icon {
+            background-color: var(--color-player1);
+            border-color: var(--color-player1-border);
+        }
+
+        .player-info#player2-info .piece-icon {
+            background-color: var(--color-player2);
+            border-color: var(--color-player2-border);
+        }
+
+        /* --- Game Board --- */
+        #game-board {
+            width: var(--board-size);
+            height: var(--board-size);
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            border: 4px solid var(--color-dark-square);
+            border-radius: 8px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            position: relative;
+        }
+
+        .square {
+            width: var(--square-size);
+            height: var(--square-size);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .square.light {
+            background-color: var(--color-light-square);
+        }
+
+        .square.dark {
+            background-color: var(--color-dark-square);
+        }
+        
+        /* Highlight for last move */
+        .square.last-move-from::after, .square.last-move-to::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--color-last-move);
+            z-index: 0;
+        }
+
+        /* --- Pieces --- */
+        .piece {
+            width: var(--piece-size);
+            height: var(--piece-size);
+            border-radius: 50%;
+            cursor: pointer;
+            position: relative;
+            z-index: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease;
+            box-sizing: border-box;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2);
+        }
+
+        .piece.player1 {
+            background-color: var(--color-player1);
+            border: 3px solid var(--color-player1-border);
+        }
+
+        .piece.player2 {
+            background-color: var(--color-player2);
+            border: 3px solid var(--color-player2-border);
+        }
+
+        /* King styling */
+        .piece.king::after {
+            content: '👑';
+            font-size: var(--king-crown-size);
+            line-height: var(--king-crown-size);
+            filter: drop-shadow(0 0 1px rgba(0,0,0,0.7));
+            position: absolute;
+            text-align: center;
+        }
+        
+        .piece.player1.king::after { color: #b58863; }
+        .piece.player2.king::after { color: #f0d9b5; }
+
+
+        /* Selected piece animation */
+        .piece.selected {
+            transform: scale(1.15);
+            box-shadow: 0 0 15px 5px var(--color-selected);
+            z-index: 10;
+        }
+
+        /* --- Hints and Overlays --- */
+        .valid-move-hint {
+            position: absolute;
+            width: 40%;
+            height: 40%;
+            background-color: var(--color-valid-move);
+            border-radius: 50%;
+            z-index: 1;
+            pointer-events: none; /* Allows clicks to pass through to the square */
+        }
+        
+        .capture-move-hint {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: var(--color-capture-hint);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* --- Controls --- */
+        .controls {
+            width: var(--board-size);
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            padding: 8px 0;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            font-size: clamp(1rem, 4vw, 1.1rem);
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--color-dark-square);
+            color: var(--color-light-square);
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn#hint-btn {
+            background-color: var(--color-gemini-accent);
+            color: var(--color-player1);
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: #c49a7a;
+            transform: translateY(-2px);
+        }
+        
+        .btn#hint-btn:hover:not(:disabled) {
+            background-color: #6a9ded;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* --- Modal Base --- */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--color-modal-bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background-color: var(--color-background);
+            padding: 30px 40px;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid var(--color-dark-square);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+            max-width: 90vw;
+            width: 500px;
+        }
+        
+        .modal.show .modal-content {
+            transform: scale(1);
+        }
+
+        /* --- Game Over Modal Specifics --- */
+        #game-over-message {
+            font-size: clamp(1.5rem, 6vw, 2.5rem);
+            margin-bottom: 20px;
+        }
+        
+        /* --- Analysis Modal Specifics --- */
+        #analysis-modal .modal-content {
+            text-align: left;
+        }
+        
+        #analysis-title {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--color-gemini-accent);
+            text-align: center;
+        }
+        
+        #analysis-result {
+            margin-top: 15px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            max-height: 40vh;
+            overflow-y: auto;
+            padding: 5px;
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid var(--color-gemini-accent);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .citation-container {
+            margin-top: 15px;
+            border-top: 1px dashed rgba(255, 255, 255, 0.1);
+            padding-top: 10px;
+            font-size: 0.75rem;
+            color: #ccc;
+        }
+
+        .citation-container a {
+            color: #90caf9;
+            text-decoration: none;
+        }
+        
+        .citation-container a:hover {
+            text-decoration: underline;
+        }
+
+        /* Attribution */
+        .attribution {
+            width: var(--board-size);
+            text-align: center;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            opacity: 0.6;
+            color: var(--color-text);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+        <!-- Game Information Panel -->
+        <div class="info-panel">
+            <div class="player-info" id="player1-info">
+                <div class="piece-icon"></div>
+                <span id="player1-captures">x0</span>
+            </div>
+            <div id="turn-indicator">Your Turn</div>
+            <div class="player-info" id="player2-info">
+                 <span id="player2-captures">x0</span>
+                <div class="piece-icon"></div>
+            </div>
+        </div>
+        
+        <!-- Game Board -->
+        <div id="game-board"></div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button id="restart-btn" class="btn">New Game</button>
+            <button id="hint-btn" class="btn">Get Hint</button>
+        </div>
+        
+        <!-- Attribution -->
+        <div class="attribution">
+            Created by Yaroslav Ostapenko
+        </div>
+    </div>
+    
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="game-over-message"></h2>
+            <button id="modal-restart-btn" class="btn">Play Again</button>
+        </div>
+    </div>
+
+    <!-- AI Analysis Modal -->
+    <div id="analysis-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="analysis-title">Gemini Checkers Grandmaster Analysis</h3>
+            <div id="loading-spinner" class="loading-spinner"></div>
+            <div id="analysis-result"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="analysis-close-btn" class="btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // --- GEMINI API CONFIG ---
+        const API_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent';
+        const API_KEY = ""; // Provided by the Canvas environment
+
+        // --- CONSTANTS ---
+        const BOARD_SIZE = 8;
+        const PLAYER1 = 1; // Human (bottom, white)
+        const PLAYER2 = 2; // AI (top, black)
+        const PIECES = {
+            EMPTY: 0,
+            PLAYER1_MAN: 1,
+            PLAYER1_KING: 3,
+            PLAYER2_MAN: 2,
+            PLAYER2_KING: 4,
+        };
+        const AI_THINKING_TIME = 500; // ms
+        const MINIMAX_DEPTH = 5; // AI Difficulty
+
+        // --- DOM ELEMENTS ---
+        const boardElement = document.getElementById('game-board');
+        const p1CapturesElement = document.getElementById('player1-captures');
+        const p2CapturesElement = document.getElementById('player2-captures');
+        const p1InfoElement = document.getElementById('player1-info');
+        const p2InfoElement = document.getElementById('player2-info');
+        const turnIndicatorElement = document.getElementById('turn-indicator');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const gameOverMessage = document.getElementById('game-over-message');
+        const restartBtn = document.getElementById('restart-btn');
+        const modalRestartBtn = document.getElementById('modal-restart-btn');
+        
+        // AI Analysis DOM elements
+        const hintButton = document.getElementById('hint-btn');
+        const analysisModal = document.getElementById('analysis-modal');
+        const analysisCloseBtn = document.getElementById('analysis-close-btn');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const analysisResultDiv = document.getElementById('analysis-result');
+
+
+        // --- GAME STATE ---
+        let boardState = [];
+        let currentPlayer = PLAYER1;
+        let selectedPiece = null; // { row, col }
+        let validMoves = [];
+        let mandatoryCaptures = [];
+        let isPlayerTurn = true;
+        let captures = { [PLAYER1]: 0, [PLAYER2]: 0 };
+        let lastMove = { from: null, to: null };
+
+        /**
+         * Initializes the game, setting up the board and state
+         */
+        function initGame() {
+            boardElement.innerHTML = '';
+            boardState = createInitialBoardState();
+            currentPlayer = PLAYER1;
+            selectedPiece = null;
+            validMoves = [];
+            mandatoryCaptures = [];
+            isPlayerTurn = true;
+            lastMove = { from: null, to: null };
+            captures = { [PLAYER1]: 0, [PLAYER2]: 0 };
+            
+            createBoardDOM();
+            renderBoard();
+            updateInfoPanel();
+            findMandatoryCaptures(PLAYER1);
+        }
+
+        /**
+         * Creates the initial 8x8 board configuration
+         * @returns {Array<Array<number>>} 2D array representing the board
+         */
+        function createInitialBoardState() {
+            const board = Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(PIECES.EMPTY));
+            for (let row = 0; row < 3; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    if ((row + col) % 2 !== 0) {
+                        board[row][col] = PIECES.PLAYER2_MAN;
+                    }
+                }
+            }
+            for (let row = 5; row < BOARD_SIZE; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    if ((row + col) % 2 !== 0) {
+                        board[row][col] = PIECES.PLAYER1_MAN;
+                    }
+                }
+            }
+            return board;
+        }
+
+        /**
+         * Creates the visual board squares in the DOM
+         */
+        function createBoardDOM() {
+            for (let row = 0; row < BOARD_SIZE; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    const square = document.createElement('div');
+                    square.classList.add('square');
+                    square.classList.add((row + col) % 2 === 0 ? 'light' : 'dark');
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    boardElement.appendChild(square);
+                }
+            }
+        }
+
+        /**
+         * Renders pieces on the board based on the current boardState
+         */
+        function renderBoard() {
+            // Clear existing pieces and hints
+            document.querySelectorAll('.piece, .valid-move-hint, .capture-move-hint').forEach(el => el.remove());
+            document.querySelectorAll('.square').forEach(sq => {
+                sq.classList.remove('last-move-from', 'last-move-to');
+            });
+
+            // Draw pieces
+            for (let row = 0; row < BOARD_SIZE; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    const pieceType = boardState[row][col];
+                    if (pieceType !== PIECES.EMPTY) {
+                        const piece = document.createElement('div');
+                        piece.classList.add('piece');
+                        piece.classList.add(isPlayer1Piece(pieceType) ? 'player1' : 'player2');
+                        if (isKing(pieceType)) {
+                            piece.classList.add('king');
+                        }
+                        const square = getSquareElement(row, col);
+                        square.appendChild(piece);
+                    }
+                }
+            }
+            
+            // Highlight last move
+            if (lastMove.from) {
+                getSquareElement(lastMove.from.row, lastMove.from.col)?.classList.add('last-move-from');
+            }
+            if (lastMove.to) {
+                getSquareElement(lastMove.to.row, lastMove.to.col)?.classList.add('last-move-to');
+            }
+
+            // Highlight selected piece
+            if (selectedPiece) {
+                const pieceElement = getSquareElement(selectedPiece.row, selectedPiece.col)?.querySelector('.piece');
+                pieceElement?.classList.add('selected');
+            }
+            
+            // Show valid move hints
+            const movesToShow = mandatoryCaptures.length > 0 ? mandatoryCaptures : validMoves;
+            movesToShow.forEach(move => {
+                if (selectedPiece && move.from.row === selectedPiece.row && move.from.col === selectedPiece.col) {
+                    const hint = document.createElement('div');
+                    hint.classList.add('valid-move-hint');
+                    const targetSquare = getSquareElement(move.to.row, move.to.col);
+                    targetSquare.appendChild(hint);
+                    if(move.captures.length > 0) {
+                        move.captures.forEach(cap => {
+                            const capHint = document.createElement('div');
+                            capHint.classList.add('capture-move-hint');
+                            getSquareElement(cap.row, cap.col)?.appendChild(capHint);
+                        });
+                    }
+                }
+            });
+        }
+        
+        /**
+         * Updates the info panel with scores and turn indicator
+         */
+        function updateInfoPanel() {
+            p1CapturesElement.textContent = `x${captures[PLAYER2]}`;
+            p2CapturesElement.textContent = `x${captures[PLAYER1]}`;
+            if (currentPlayer === PLAYER1) {
+                p1InfoElement.classList.add('active');
+                p2InfoElement.classList.remove('active');
+                turnIndicatorElement.textContent = 'Your Turn';
+                hintButton.disabled = false;
+            } else {
+                p2InfoElement.classList.add('active');
+                p1InfoElement.classList.remove('active');
+                turnIndicatorElement.textContent = "AI's Turn";
+                hintButton.disabled = true;
+            }
+        }
+
+        // --- EVENT HANDLING ---
+
+        boardElement.addEventListener('click', (e) => {
+            if (!isPlayerTurn) return;
+            const square = e.target.closest('.square');
+            if (!square) return;
+
+            const row = parseInt(square.dataset.row);
+            const col = parseInt(square.dataset.col);
+
+            const piece = boardState[row][col];
+
+            if (selectedPiece) {
+                // Attempt to make a move
+                const move = findMove(validMoves, selectedPiece.row, selectedPiece.col, row, col);
+                if (move) {
+                    executeMove(move);
+                } else {
+                    // Deselect or select another piece
+                    selectedPiece = null;
+                    if (isPlayer1Piece(piece)) {
+                        selectPiece(row, col);
+                    }
+                    renderBoard();
+                }
+            } else if (isPlayer1Piece(piece)) {
+                // Select a piece
+                selectPiece(row, col);
+                renderBoard();
+            }
+        });
+        
+        restartBtn.addEventListener('click', initGame);
+        modalRestartBtn.addEventListener('click', () => {
+            gameOverModal.classList.remove('show');
+            initGame();
+        });
+        
+        hintButton.addEventListener('click', getAiAnalysis);
+        analysisCloseBtn.addEventListener('click', () => {
+            analysisModal.classList.remove('show');
+        });
+
+        // --- GAME LOGIC ---
+
+        /**
+         * Selects a piece and calculates its valid moves.
+         * @param {number} row 
+         * @param {number} col 
+         */
+        function selectPiece(row, col) {
+            selectedPiece = { row, col };
+            const allPlayerMoves = findAllValidMoves(PLAYER1);
+            if (mandatoryCaptures.length > 0) {
+                 validMoves = allPlayerMoves.filter(move => move.captures.length > 0);
+            } else {
+                 validMoves = allPlayerMoves;
+            }
+        }
+
+        /**
+         * Executes a move, updates the board, and checks for follow-up captures.
+         * @param {object} move The move to execute.
+         */
+        function executeMove(move) {
+            const piece = boardState[move.from.row][move.from.col];
+            boardState[move.to.row][move.to.col] = piece;
+            boardState[move.from.row][move.from.col] = PIECES.EMPTY;
+            lastMove = { from: { ...move.from }, to: { ...move.to }};
+
+            // Remove captured pieces
+            move.captures.forEach(cap => {
+                boardState[cap.row][cap.col] = PIECES.EMPTY;
+                captures[getPieceOwner(piece)]++;
+            });
+
+            selectedPiece = null;
+            
+            // Check for promotion
+            if (isPlayer1Piece(piece) && move.to.row === 0) {
+                boardState[move.to.row][move.to.col] = PIECES.PLAYER1_KING;
+            } else if (isPlayer2Piece(piece) && move.to.row === BOARD_SIZE - 1) {
+                boardState[move.to.row][move.to.col] = PIECES.PLAYER2_KING;
+            }
+            
+            // Check for multi-captures
+            const postMoveCaptures = findCaptureMovesForPiece(move.to.row, move.to.col, boardState);
+            if (move.captures.length > 0 && postMoveCaptures.length > 0) {
+                 // Player must continue capturing
+                 currentPlayer = getPieceOwner(piece);
+                 isPlayerTurn = (currentPlayer === PLAYER1);
+                 mandatoryCaptures = postMoveCaptures;
+                 selectPiece(move.to.row, move.to.col);
+                 renderBoard();
+                 updateInfoPanel();
+            } else {
+                // Turn ends
+                switchPlayer();
+            }
+        }
+        
+        /**
+         * Switches the current player and triggers AI turn if necessary.
+         */
+        function switchPlayer() {
+            currentPlayer = (currentPlayer === PLAYER1) ? PLAYER2 : PLAYER1;
+            isPlayerTurn = (currentPlayer === PLAYER1);
+            updateInfoPanel();
+            renderBoard(); // Render to clear hints before AI move
+
+            const winner = checkWinCondition();
+            if (winner) {
+                showGameOver(winner);
+                return;
+            }
+            
+            findMandatoryCaptures(currentPlayer);
+
+            if (!isPlayerTurn) {
+                setTimeout(aiMove, AI_THINKING_TIME);
+            }
+        }
+        
+        /**
+         * Finds mandatory captures for the current player.
+         * @param {number} player The player to check for.
+         */
+        function findMandatoryCaptures(player) {
+            mandatoryCaptures = findAllValidMoves(player).filter(m => m.captures.length > 0);
+        }
+
+        /**
+         * Checks if the game has ended and returns the winner.
+         * @returns {number|string|null} Winner (PLAYER1, PLAYER2), 'draw', or null.
+         */
+        function checkWinCondition() {
+            const p1Moves = findAllValidMoves(PLAYER1);
+            const p2Moves = findAllValidMoves(PLAYER2);
+
+            if (p1Moves.length === 0) return PLAYER2;
+            if (p2Moves.length === 0) return PLAYER1;
+            
+            return null;
+        }
+
+        /**
+         * Displays the game over modal.
+         * @param {number|string} winner The winner of the game.
+         */
+        function showGameOver(winner) {
+            isPlayerTurn = false;
+            let message = '';
+            if (winner === PLAYER1) {
+                message = "You Win!";
+            } else if (winner === PLAYER2) {
+                message = "AI Wins!";
+            } else {
+                message = "It's a Draw!";
+            }
+            gameOverMessage.textContent = message;
+            gameOverModal.classList.add('show');
+        }
+
+        // --- MOVE CALCULATION ---
+
+        /**
+         * Finds all valid moves for a given player.
+         * @param {number} player The player.
+         * @param {Array<Array<number>>} board The board state to use.
+         * @returns {Array<object>} A list of valid moves.
+         */
+        function findAllValidMoves(player, board = boardState) {
+            let moves = [];
+            let captures = [];
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    const piece = board[r][c];
+                    if (piece !== PIECES.EMPTY && getPieceOwner(piece) === player) {
+                        const pieceMoves = findMovesForPiece(r, c, board);
+                        pieceMoves.forEach(move => {
+                            if (move.captures.length > 0) {
+                                captures.push(move);
+                            } else {
+                                moves.push(move);
+                            }
+                        });
+                    }
+                }
+            }
+            return captures.length > 0 ? captures : moves;
+        }
+
+        /**
+         * Finds all valid moves for a single piece.
+         * @param {number} row The piece's row.
+         * @param {number} col The piece's column.
+         * @param {Array<Array<number>>} board The board state.
+         * @returns {Array<object>} A list of valid moves for that piece.
+         */
+        function findMovesForPiece(row, col, board) {
+            const captures = findCaptureMovesForPiece(row, col, board);
+            if (captures.length > 0) {
+                return captures;
+            }
+            return findSimpleMovesForPiece(row, col, board);
+        }
+
+        /**
+         * Finds simple (non-capture) moves for a piece.
+         * @param {number} row 
+         * @param {number} col 
+         * @param {Array<Array<number>>} board 
+         * @returns {Array<object>}
+         */
+        function findSimpleMovesForPiece(row, col, board) {
+            const piece = board[row][col];
+            if (isKing(piece)) {
+                return findKingSimpleMoves(row, col, board);
+            } else {
+                return findManSimpleMoves(row, col, board);
+            }
+        }
+        
+        /**
+         * Finds simple moves for a man.
+         * @param {number} row 
+         * @param {number} col 
+         * @param {Array<Array<number>>} board 
+         * @returns {Array<object>}
+         */
+        function findManSimpleMoves(row, col, board) {
+            const moves = [];
+            const piece = board[row][col];
+            const forwardDir = isPlayer1Piece(piece) ? -1 : 1;
+            const directions = [[forwardDir, -1], [forwardDir, 1]];
+
+            for (const [dr, dc] of directions) {
+                const newRow = row + dr;
+                const newCol = col + dc;
+                if (isValidSquare(newRow, newCol) && board[newRow][newCol] === PIECES.EMPTY) {
+                    moves.push({ from: {row, col}, to: {row: newRow, col: newCol}, captures: [] });
+                }
+            }
+            return moves;
+        }
+        
+        /**
+         * Finds simple moves for a king.
+         * @param {number} row 
+         * @param {number} col 
+         * @param {Array<Array<number>>} board 
+         * @returns {Array<object>}
+         */
+        function findKingSimpleMoves(row, col, board) {
+            const moves = [];
+            const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+            for (const [dr, dc] of directions) {
+                for (let i = 1; i < BOARD_SIZE; i++) {
+                    const newRow = row + i * dr;
+                    const newCol = col + i * dc;
+                    if (!isValidSquare(newRow, newCol)) break;
+                    if (board[newRow][newCol] === PIECES.EMPTY) {
+                        moves.push({ from: {row, col}, to: {row: newRow, col: newCol}, captures: [] });
+                    } else {
+                        break;
+                    }
+                }
+            }
+            return moves;
+        }
+
+        /**
+         * Finds capture moves for a piece recursively (Russian Checkers rule: Long jump for kings, forced capture).
+         * @param {number} row 
+         * @param {number} col 
+         * @param {Array<Array<number>>} board 
+         * @param {Array<object>} capturedSoFar
+         * @returns {Array<object>}
+         */
+        function findCaptureMovesForPiece(row, col, board, capturedSoFar = []) {
+            const piece = board[row][col];
+            const isAKing = isKing(piece);
+            let availableMoves = [];
+            
+            const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+
+            for (const [dr, dc] of directions) {
+                let opponentPos = null;
+                let landingPos = null;
+
+                for (let i = 1; i < BOARD_SIZE; i++) {
+                    const checkRow = row + i * dr;
+                    const checkCol = col + i * dc;
+
+                    if (!isValidSquare(checkRow, checkCol)) break;
+                    
+                    const checkedPiece = board[checkRow][checkCol];
+
+                    if (checkedPiece !== PIECES.EMPTY) {
+                        // Found a piece. Is it an opponent and not already captured?
+                        if (isOpponent(piece, checkedPiece) && !capturedSoFar.some(c => c.row === checkRow && c.col === checkCol)) {
+                           opponentPos = { row: checkRow, col: checkCol };
+                           break; // Found the first opponent in this line
+                        } else {
+                           break; // Blocked by own piece or already captured one
+                        }
+                    }
+                    if (!isAKing) break; // Men can't slide over empty squares before capture
+                }
+
+                if (opponentPos) {
+                    // Look for landing spots behind the opponent
+                    // Kings can land anywhere behind the opponent
+                    // Men must land immediately behind (i = 1)
+                    let maxDistance = isAKing ? BOARD_SIZE : 2; 
+
+                    for (let i = 1; i < maxDistance; i++) {
+                        const landRow = opponentPos.row + i * dr;
+                        const landCol = opponentPos.col + i * dc;
+
+                        if (!isValidSquare(landRow, landCol)) break;
+                        
+                        const landingPiece = board[landRow][landCol];
+                        
+                        // Russian Checkers Rule: landing must be empty
+                        if (landingPiece === PIECES.EMPTY) {
+                            landingPos = { row: landRow, col: landCol };
+
+                            // Simulate the jump to check for further captures
+                            const newBoard = cloneBoard(board);
+                            // Promote piece if it lands on king row during capture sequence (critical rule)
+                            let newPiece = piece;
+                            if (!isKing(piece) && (landingPos.row === 0 || landingPos.row === BOARD_SIZE - 1)) {
+                                newPiece = isPlayer1Piece(piece) ? PIECES.PLAYER1_KING : PIECES.PLAYER2_KING;
+                            }
+                            
+                            newBoard[landingPos.row][landingPos.col] = newPiece;
+                            newBoard[row][col] = PIECES.EMPTY;
+                            newBoard[opponentPos.row][opponentPos.col] = PIECES.EMPTY;
+
+                            const newCaptured = [...capturedSoFar, opponentPos];
+                            
+                            // Check for further captures from the new position
+                            const nextMoves = findCaptureMovesForPiece(landingPos.row, landingPos.col, newBoard, newCaptured);
+                            
+                            if (nextMoves.length > 0) {
+                                availableMoves.push(...nextMoves);
+                            } else {
+                                // If no more jumps, this is a final move
+                                availableMoves.push({
+                                    from: {row, col},
+                                    to: landingPos,
+                                    captures: newCaptured
+                                });
+                            }
+                        } else {
+                            break; // Blocked landing
+                        }
+                        
+                        if (!isAKing) break; // Man can only check one space behind
+                    }
+                }
+            }
+            
+            // Deduplicate and prioritize moves by capture length
+            const uniqueMoves = {};
+            availableMoves.forEach(move => {
+                const key = `${move.from.row},${move.from.col}-${move.to.row},${move.to.col}-${move.captures.map(c => `${c.row},${c.col}`).sort().join('|')}`;
+                
+                // Only keep the move with the most captures (should already be handled by recursion, but ensures uniqueness)
+                if (!uniqueMoves[key] || move.captures.length > uniqueMoves[key].captures.length) {
+                    uniqueMoves[key] = { ...move };
+                }
+            });
+
+            return Object.values(uniqueMoves);
+        }
+
+        // --- AI LOGIC (MINIMAX) ---
+
+        /**
+         * Initiates the AI's move selection and execution.
+         */
+        function aiMove() {
+            const bestMove = findBestMoveAI(boardState, PLAYER2);
+
+            if (bestMove.move) {
+                // Animate selection for realism
+                selectedPiece = { ...bestMove.move.from };
+                renderBoard();
+                
+                setTimeout(() => {
+                   executeMove(bestMove.move);
+                }, 300);
+            } else {
+                // AI has no moves, player wins
+                showGameOver(PLAYER1);
+            }
+        }
+        
+        /**
+         * Finds the best move for the AI using minimax.
+         * @param {Array<Array<number>>} board 
+         * @param {number} player 
+         * @returns {object} { score, move }
+         */
+        function findBestMoveAI(board, player) {
+            let bestScore = -Infinity;
+            let bestMove = null;
+            const possibleMoves = findAllValidMoves(player, board);
+
+            possibleMoves.forEach(move => {
+                const newBoard = simulateMove(board, move);
+                const score = minimax(newBoard, MINIMAX_DEPTH - 1, -Infinity, Infinity, false); // Start with minimizing player (human)
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = move;
+                }
+            });
+            return { score: bestScore, move: bestMove };
+        }
+        
+        /**
+         * Minimax algorithm with alpha-beta pruning.
+         */
+        function minimax(board, depth, alpha, beta, isMaximizingPlayer) {
+            if (depth === 0 || checkWinConditionForBoard(board)) {
+                return evaluateBoard(board);
+            }
+            
+            const player = isMaximizingPlayer ? PLAYER2 : PLAYER1;
+            const possibleMoves = findAllValidMoves(player, board);
+            
+            // If no moves available, the player loses
+            if (possibleMoves.length === 0) {
+                 return isMaximizingPlayer ? -1000 : 1000;
+            }
+
+            if (isMaximizingPlayer) {
+                let maxEval = -Infinity;
+                for (const move of possibleMoves) {
+                    const newBoard = simulateMove(board, move);
+                    const evaluation = minimax(newBoard, depth - 1, alpha, beta, false);
+                    maxEval = Math.max(maxEval, evaluation);
+                    alpha = Math.max(alpha, evaluation);
+                    if (beta <= alpha) {
+                        break;
+                    }
+                }
+                return maxEval;
+            } else {
+                let minEval = Infinity;
+                for (const move of possibleMoves) {
+                    const newBoard = simulateMove(board, move);
+                    const evaluation = minimax(newBoard, depth - 1, alpha, beta, true);
+                    minEval = Math.min(minEval, evaluation);
+                    beta = Math.min(beta, evaluation);
+                    if (beta <= alpha) {
+                        break;
+                    }
+                }
+                return minEval;
+            }
+        }
+        
+        /**
+         * Evaluates the score of a given board state for the AI.
+         * Higher score is better for AI (PLAYER2).
+         */
+        function evaluateBoard(board) {
+            let score = 0;
+            let p1Pieces = 0, p2Pieces = 0;
+
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    const piece = board[r][c];
+                    if (piece === PIECES.EMPTY) continue;
+                    
+                    const isP1 = isPlayer1Piece(piece);
+
+                    // Base Piece Value: AI (P2) is positive, Player (P1) is negative
+                    if (piece === PIECES.PLAYER1_MAN) { score -= 1; p1Pieces++; }
+                    else if (piece === PIECES.PLAYER2_MAN) { score += 1; p2Pieces++; }
+                    else if (piece === PIECES.PLAYER1_KING) { score -= 3; p1Pieces += 3; }
+                    else if (piece === PIECES.PLAYER2_KING) { score += 3; p2Pieces += 3; }
+                    
+                    // Positional value (for Man pieces only)
+                    if (!isKing(piece)) {
+                        if (isP1) {
+                            // Player (P1, bottom) value: penalty for being far from king row (row 0)
+                            score -= (BOARD_SIZE - 1 - r) * 0.05; 
+                        } else {
+                            // AI (P2, top) value: bonus for advancing (closer to king row at row 7)
+                            score += r * 0.05;
+                        }
+                    }
+                    
+                    // Center Control Bonus (for both players)
+                    if (c > 1 && c < 6) {
+                        score += isP1 ? -0.01 : 0.01;
+                    }
+                    
+                    // 'Bridge' defense (pieces at r=7, c=1 or c=7 to protect king row)
+                    if (isP1 && r === 7 && (c === 1 || c === 7)) score -= 0.1;
+                    if (!isP1 && r === 0 && (c === 0 || c === 6)) score += 0.1;
+                }
+            }
+            
+            // Major win/loss condition evaluation
+            if (p1Pieces === 0) return 10000;
+            if (p2Pieces === 0) return -10000;
+            
+            const p1Moves = findAllValidMoves(PLAYER1, board).length;
+            const p2Moves = findAllValidMoves(PLAYER2, board).length;
+            
+            // Check for immediate capture forced win/loss
+            if (p1Moves === 0) return 9999;
+            if (p2Moves === 0) return -9999;
+            
+            // Mobility bonus
+            score += p2Moves * 0.01;
+            score -= p1Moves * 0.01;
+
+            return score;
+        }
+        
+        /**
+         * Helper function for AI to check for terminal nodes.
+         */
+        function checkWinConditionForBoard(board) {
+             const p1Moves = findAllValidMoves(PLAYER1, board);
+             if (p1Moves.length === 0) return true;
+             const p2Moves = findAllValidMoves(PLAYER2, board);
+             if (p2Moves.length === 0) return true;
+             return false;
+        }
+        
+        // --- GEMINI API INTERACTION ---
+
+        /**
+         * Executes a fetch request with exponential backoff for retries.
+         */
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.status === 429 && i < maxRetries - 1) {
+                        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                    if (!response.ok) {
+                        const errorBody = await response.text();
+                        throw new Error(`API call failed with status ${response.status}: ${errorBody}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
+        /**
+         * Calls the Gemini API to get game analysis/hint.
+         */
+        async function getAiAnalysis() {
+            if (!isPlayerTurn) return;
+
+            analysisModal.classList.add('show');
+            loadingSpinner.style.display = 'block';
+            analysisResultDiv.innerHTML = '';
+            hintButton.disabled = true;
+            analysisCloseBtn.disabled = true;
+
+            // 1. Format Board State for LLM (FEN-like representation)
+            const pieceMap = {
+                [PIECES.EMPTY]: '.',
+                [PIECES.PLAYER1_MAN]: 'w',
+                [PIECES.PLAYER1_KING]: 'W',
+                [PIECES.PLAYER2_MAN]: 'b',
+                [PIECES.PLAYER2_KING]: 'B',
+            };
+            
+            let boardRepresentation = "Current 8x8 Board State (Top=R0, Bottom=R7; Player=White/w/W, AI=Black/b/B):\n";
+            boardState.forEach((row, r) => {
+                boardRepresentation += `R${r}: `;
+                row.forEach(piece => {
+                    boardRepresentation += pieceMap[piece] + ' ';
+                });
+                boardRepresentation += '\n';
+            });
+            
+            // Calculate mandatory moves to guide the prompt
+            let captureInfo = '';
+            if (mandatoryCaptures.length > 0) {
+                captureInfo = `\nCRITICAL: The current player (White/w) has mandatory capture moves. The AI must focus only on suggesting a move that executes one of the mandatory jumps. A jump is available from positions like: ${[...new Set(mandatoryCaptures.map(m => `(${m.from.row}, ${m.from.col})`))].join(', ')}.`;
+            } else {
+                 captureInfo = "\nNo mandatory captures are currently available. Focus on strategic positioning.";
+            }
+
+            const systemPrompt = "You are a world-class Russian Checkers (Shashki) grandmaster. Provide a concise, strategic analysis of the current board state and suggest the best move for the 'White' player (man='w', king='W'). Focus on the rules of Russian Checkers, which emphasize capturing and king-line strategy. Do not mention the letter-number notation for squares, use only row/column coordinates (e.g., 'moving the piece at (5, 2) to (4, 3)').";
+
+            const userQuery = `Analyze the following Russian Checkers board state. It is the 'White' player's turn (w/W).
+${boardRepresentation}
+${captureInfo}
+Based on this board state, what is the best move for White, and what is the strategic reasoning behind it? Keep your analysis to a maximum of two short paragraphs.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                tools: [{ "google_search": {} }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            const apiUrl = `${API_URL_BASE}?key=${API_KEY}`;
+
+            try {
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const text = candidate.content.parts[0].text;
+                    
+                    let sourcesHtml = '';
+                    const groundingMetadata = candidate.groundingMetadata;
+                    if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                        const sources = groundingMetadata.groundingAttributions
+                            .map(attribution => ({
+                                uri: attribution.web?.uri,
+                                title: attribution.web?.title,
+                            }))
+                            .filter(source => source.uri && source.title);
+
+                        if (sources.length > 0) {
+                            sourcesHtml = '<div class="citation-container">Sources for analysis:<ul>';
+                            sources.forEach(s => {
+                                sourcesHtml += `<li><a href="${s.uri}" target="_blank">${s.title}</a></li>`;
+                            });
+                            sourcesHtml += '</ul></div>';
+                        }
+                    }
+
+                    analysisResultDiv.innerHTML = text.replace(/\n/g, '<br>') + sourcesHtml;
+
+                } else {
+                    analysisResultDiv.textContent = "Analysis failed: Could not get a response from the AI.";
+                }
+            } catch (error) {
+                console.error("Gemini API Error:", error);
+                analysisResultDiv.textContent = `Error fetching analysis: ${error.message}. Please try again.`;
+            } finally {
+                loadingSpinner.style.display = 'none';
+                hintButton.disabled = false;
+                analysisCloseBtn.disabled = false;
+            }
+        }
+
+
+        // --- UTILITY FUNCTIONS ---
+        function getPieceOwner(piece) {
+            return isPlayer1Piece(piece) ? PLAYER1 : PLAYER2;
+        }
+        function isPlayer1Piece(piece) {
+            return piece === PIECES.PLAYER1_MAN || piece === PIECES.PLAYER1_KING;
+        }
+        function isPlayer2Piece(piece) {
+            return piece === PIECES.PLAYER2_MAN || piece === PIECES.PLAYER2_KING;
+        }
+        function isKing(piece) {
+            return piece === PIECES.PLAYER1_KING || piece === PIECES.PLAYER2_KING;
+        }
+        function isOpponent(piece1, piece2) {
+            return getPieceOwner(piece1) !== getPieceOwner(piece2);
+        }
+        function isValidSquare(row, col) {
+            return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
+        }
+        function getSquareElement(row, col) {
+            return boardElement.querySelector(`.square[data-row='${row}'][data-col='${col}']`);
+        }
+        function findMove(moves, fromRow, fromCol, toRow, toCol) {
+            return moves.find(m => m.from.row === fromRow && m.from.col === fromCol && m.to.row === toRow && m.to.col === toCol);
+        }
+        function cloneBoard(board) {
+            return board.map(arr => arr.slice());
+        }
+        function simulateMove(board, move) {
+            const newBoard = cloneBoard(board);
+            const piece = newBoard[move.from.row][move.from.col];
+            let newPiece = piece;
+            
+            // Check for promotion in simulation (Must be done BEFORE moving to handle multi-captures correctly)
+            if (isPlayer1Piece(piece) && !isKing(piece) && move.to.row === 0) {
+                newPiece = PIECES.PLAYER1_KING;
+            } else if (isPlayer2Piece(piece) && !isKing(piece) && move.to.row === BOARD_SIZE - 1) {
+                newPiece = PIECES.PLAYER2_KING;
+            }
+            
+            newBoard[move.to.row][move.to.col] = newPiece;
+            newBoard[move.from.row][move.from.col] = PIECES.EMPTY;
+
+            move.captures.forEach(cap => {
+                newBoard[cap.row][cap.col] = PIECES.EMPTY;
+            });
+            
+            return newBoard;
+        }
+
+        // --- START GAME ---
+        initGame();
+    });
+    </script>
+</body>
+</html>

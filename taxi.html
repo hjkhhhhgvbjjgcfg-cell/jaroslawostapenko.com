@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>2D City Taxi</title>
+    <style>
+        /* Basic styles to make the game full-screen and remove default margins */
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            background-color: #333;
+            font-family: 'Arial', sans-serif;
+            color: white;
+        }
+
+        /* Canvas styling to ensure it fits the screen and has a clean look */
+        #gameCanvas {
+            display: block;
+            background-color: #000;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Styling for the game's loading screen and UI overlays */
+        .game-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            text-align: center;
+        }
+
+        #loadingScreen h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #ffcc00;
+            text-shadow: 2px 2px 4px #000;
+        }
+
+        #loadingScreen p {
+            font-size: 1.2em;
+        }
+
+        /* Styles for mobile touch controls */
+        .touch-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            display: none; /* Hidden by default, enabled via JS on touch devices */
+            justify-content: space-between;
+            z-index: 10;
+            pointer-events: none; /* Allows canvas interaction through the container */
+        }
+
+        .control-cluster {
+            display: flex;
+            gap: 10px;
+        }
+
+        .touch-button {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2em;
+            color: white;
+            user-select: none;
+            pointer-events: all; /* Make buttons clickable */
+            transition: background-color 0.1s ease;
+        }
+
+        .touch-button:active {
+            background-color: rgba(255, 255, 255, 0.6);
+        }
+
+        #turn-controls {
+            flex-direction: row-reverse; /* Put left on the left side of the pair */
+        }
+
+    </style>
+</head>
+<body>
+    <!-- The canvas where the game will be rendered -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Loading screen overlay -->
+    <div id="loadingScreen" class="game-overlay">
+        <h1>2D City Taxi</h1>
+        <p>Loading Game Assets...</p>
+        <p>Use Arrow Keys or WASD to Drive</p>
+        <!-- ADDED CREATOR NAME HERE -->
+        <p>Created by Yaroslav Ostapenko</p>
+    </div>
+    
+    <!-- On-screen controls for mobile devices -->
+    <div class="touch-controls" id="touchControls">
+        <div class="control-cluster" id="turn-controls">
+            <button class="touch-button" id="rightBtn">⇨</button>
+            <button class="touch-button" id="leftBtn">⇦</button>
+        </div>
+        <div class="control-cluster" id="move-controls">
+            <button class="touch-button" id="brakeBtn">⇩</button>
+            <button class="touch-button" id="gasBtn">⇧</button>
+        </div>
+    </div>
+
+
+    <script>
+        // --- GAME INITIALIZATION ---
+        window.onload = function() {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const loadingScreen = document.getElementById('loadingScreen');
+
+            // Set canvas dimensions to fill the window
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // Hide loading screen and start the game
+            loadingScreen.style.display = 'none';
+            
+            const game = new Game(canvas, ctx);
+            game.start();
+        };
+        
+        // --- MAIN GAME CLASS ---
+        class Game {
+            constructor(canvas, ctx) {
+                this.canvas = canvas;
+                this.ctx = ctx;
+                this.lastTime = 0;
+                this.isGameRunning = false;
+
+                // Game world properties
+                this.TILE_SIZE = 160;
+                this.map = this.createMap();
+
+                // Player (taxi) setup
+                const startPos = this.findStartPosition();
+                this.car = new Car(startPos.x, startPos.y, this.TILE_SIZE * 0.6, this.TILE_SIZE * 0.35);
+
+                // Camera setup
+                this.camera = new Camera(this.canvas.width, this.canvas.height, this.map[0].length * this.TILE_SIZE, this.map.length * this.TILE_SIZE);
+
+                // Input handler
+                this.input = new InputHandler();
+
+                // Handle window resizing
+                window.addEventListener('resize', () => this.resizeCanvas());
+
+                // Check for touch support and show mobile controls if needed
+                this.setupMobileControls();
+            }
+
+            // Map layout using a 2D array of numbers
+            // 0: Grass, 1: Road, 2: Building, 3: Tree, 4: H-Road-Marking, 5: V-Road-Marking, 6: Rail, 7: Parking, 8: Intersection, 9: Player Start
+            createMap() {
+                return [
+                    [2, 2, 2, 2, 2, 0, 3, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+                    [2, 8, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 4, 8, 2],
+                    [2, 5, 2, 2, 2, 0, 3, 0, 5, 2, 2, 7, 7, 2, 2, 7, 5, 2, 3, 0, 2, 0, 3, 2, 0, 5, 2],
+                    [2, 5, 2, 0, 0, 3, 0, 0, 5, 2, 0, 0, 0, 0, 0, 0, 5, 2, 0, 0, 2, 3, 0, 2, 0, 5, 2],
+                    [2, 5, 2, 0, 3, 0, 0, 0, 5, 2, 3, 0, 0, 0, 3, 0, 5, 2, 0, 0, 2, 0, 0, 2, 0, 5, 2],
+                    [2, 5, 2, 0, 0, 0, 0, 0, 5, 2, 0, 0, 0, 0, 0, 0, 5, 2, 0, 0, 2, 0, 0, 2, 0, 5, 2],
+                    [2, 8, 4, 4, 4, 4, 6, 6, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 8, 4, 4, 8, 4, 8, 2],
+                    [0, 5, 0, 0, 3, 0, 6, 6, 5, 0, 0, 3, 0, 0, 0, 0, 5, 0, 0, 3, 5, 0, 0, 5, 0, 5, 0],
+                    [3, 5, 0, 3, 0, 0, 6, 6, 5, 0, 3, 0, 0, 3, 0, 3, 5, 3, 0, 0, 5, 0, 3, 5, 0, 5, 3],
+                    [0, 5, 0, 0, 0, 0, 6, 6, 9, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 5, 0, 0, 5, 0, 5, 0],
+                    [2, 8, 4, 4, 4, 4, 6, 6, 8, 4, 4, 7, 7, 4, 4, 4, 8, 4, 4, 4, 8, 4, 4, 8, 4, 8, 2],
+                    [2, 5, 2, 2, 2, 0, 6, 6, 5, 2, 2, 0, 0, 2, 2, 0, 5, 2, 2, 3, 5, 2, 2, 5, 2, 5, 2],
+                    [2, 5, 2, 7, 2, 0, 6, 6, 5, 2, 0, 3, 0, 0, 2, 0, 5, 7, 2, 0, 5, 0, 2, 5, 2, 5, 2],
+                    [2, 5, 2, 7, 2, 3, 6, 6, 5, 2, 0, 0, 0, 3, 2, 3, 5, 7, 2, 0, 5, 0, 2, 5, 2, 5, 2],
+                    [2, 5, 2, 2, 2, 0, 6, 6, 5, 2, 2, 2, 2, 2, 2, 0, 5, 2, 2, 0, 5, 2, 2, 5, 2, 5, 2],
+                    [2, 8, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 8, 4, 4, 4, 4, 4, 4, 4, 4, 8, 2],
+                    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+                ];
+            }
+
+            // Find where the player starts on the map (tile type 9)
+            findStartPosition() {
+                for (let row = 0; row < this.map.length; row++) {
+                    for (let col = 0; col < this.map[row].length; col++) {
+                        if (this.map[row][col] === 9) {
+                            // Convert start position tile to a road intersection
+                            this.map[row][col] = 8; 
+                            return {
+                                x: col * this.TILE_SIZE + this.TILE_SIZE / 2,
+                                y: row * this.TILE_SIZE + this.TILE_SIZE / 2
+                            };
+                        }
+                    }
+                }
+                // Default start position if not found in map
+                return { x: 150, y: 150 };
+            }
+            
+            // --- CORE GAME LOOP ---
+            start() {
+                if (!this.isGameRunning) {
+                    this.isGameRunning = true;
+                    this.gameLoop(0);
+                }
+            }
+
+            stop() {
+                this.isGameRunning = false;
+            }
+
+            gameLoop(timestamp) {
+                if (!this.isGameRunning) return;
+
+                const deltaTime = (timestamp - this.lastTime) / 1000; // Time in seconds
+                this.lastTime = timestamp;
+
+                // 1. Update game state
+                this.update(deltaTime);
+
+                // 2. Render the game
+                this.draw();
+
+                // 3. Request the next frame
+                requestAnimationFrame(this.gameLoop.bind(this));
+            }
+
+            // --- UPDATE LOGIC ---
+            update(deltaTime) {
+                // Update car physics and position
+                this.car.update(this.input, deltaTime);
+                // Handle collisions with map elements
+                this.checkCollisions();
+                // Update camera to follow the car
+                this.camera.update(this.car.x, this.car.y);
+            }
+
+            // --- DRAWING LOGIC ---
+            draw() {
+                // Clear the entire canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Save canvas state and move the "camera"
+                this.ctx.save();
+                this.ctx.translate(-this.camera.x, -this.camera.y);
+
+                // Draw all game elements
+                this.drawMap();
+                this.car.draw(this.ctx);
+                this.drawTrees(); // Draw trees after car so they appear on top
+
+                // Restore canvas state to draw UI elements
+                this.ctx.restore();
+
+                // Draw UI (e.g., speedometer, credits)
+                this.drawUI();
+            }
+
+            // Draws the map based on the 2D array
+            drawMap() {
+                const startRow = Math.floor(this.camera.y / this.TILE_SIZE);
+                const endRow = Math.min(this.map.length - 1, Math.ceil((this.camera.y + this.canvas.height) / this.TILE_SIZE));
+                const startCol = Math.floor(this.camera.x / this.TILE_SIZE);
+                const endCol = Math.min(this.map[0].length - 1, Math.ceil((this.camera.x + this.canvas.width) / this.TILE_SIZE));
+
+                for (let row = startRow; row <= endRow; row++) {
+                    for (let col = startCol; col <= endCol; col++) {
+                        if (row < 0 || col < 0 || row >= this.map.length || col >= this.map[0].length) continue;
+                        
+                        const tileType = this.map[row][col];
+                        const x = col * this.TILE_SIZE;
+                        const y = row * this.TILE_SIZE;
+                        
+                        this.drawTile(tileType, x, y, col, row);
+                    }
+                }
+            }
+
+            // Helper function to draw a single tile
+            drawTile(type, x, y, col, row) {
+                switch (type) {
+                    case 0: // Grass
+                        this.ctx.fillStyle = '#347C2C';
+                        this.ctx.fillRect(x, y, this.TILE_SIZE, this.TILE_SIZE);
+                        break;
+                    case 1: // Road
+                    case 4: // H-Road-Marking
+                    case 5: // V-Road-Marking
+                    case 8: // Intersection
+                    case 7: // Parking
+                    case 6: // Rail
+                        // Draw base asphalt for all road-like types
+                        this.ctx.fillStyle = '#444';
+                        this.ctx.fillRect(x, y, this.TILE_SIZE, this.TILE_SIZE);
+
+                        // Draw specific features on top
+                        if (type === 4) this.drawHorizontalMarking(x, y);
+                        if (type === 5) this.drawVerticalMarking(x, y);
+                        if (type === 7) this.drawParkingSpot(x, y);
+                        if (type === 6) this.drawRail(x, y);
+                        break;
+                    case 2: // Building
+                        this.drawBuilding(x, y, col, row);
+                        break;
+                    // Trees (case 3) are handled in a separate drawing pass
+                }
+            }
+            
+            drawHorizontalMarking(x, y) {
+                this.ctx.fillStyle = '#FFFFFF';
+                const dashWidth = this.TILE_SIZE / 4;
+                const dashGap = this.TILE_SIZE / 4;
+                for (let i = 0; i < this.TILE_SIZE; i += dashWidth + dashGap) {
+                    this.ctx.fillRect(x + i, y + this.TILE_SIZE / 2 - 2, dashWidth, 4);
+                }
+            }
+            
+            drawVerticalMarking(x, y) {
+                this.ctx.fillStyle = '#FFFFFF';
+                const dashHeight = this.TILE_SIZE / 4;
+                const dashGap = this.TILE_SIZE / 4;
+                for (let i = 0; i < this.TILE_SIZE; i += dashHeight + dashGap) {
+                    this.ctx.fillRect(x + this.TILE_SIZE / 2 - 2, y + i, 4, dashHeight);
+                }
+            }
+
+            drawParkingSpot(x, y) {
+                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.lineWidth = 3;
+                this.ctx.strokeRect(x + 5, y + 5, this.TILE_SIZE - 10, this.TILE_SIZE - 10);
+            }
+            
+            drawRail(x, y) {
+                 // Sleepers
+                this.ctx.fillStyle = '#654321'; // Brown for sleepers
+                for (let i = 0; i < this.TILE_SIZE; i += this.TILE_SIZE / 5) {
+                    this.ctx.fillRect(x, y + i, this.TILE_SIZE, 5);
+                }
+                // Rails
+                this.ctx.fillStyle = '#999'; // Grey for rails
+                this.ctx.fillRect(x + this.TILE_SIZE / 2 - 15, y, 8, this.TILE_SIZE);
+                this.ctx.fillRect(x + this.TILE_SIZE / 2 + 7, y, 8, this.TILE_SIZE);
+            }
+
+            drawBuilding(x, y, col, row) {
+                // Use coordinates to generate a consistent but varied look for buildings
+                const seed = col * 13 + row * 37;
+                const buildingRNG = new Math.seedrandom(seed);
+
+                const baseGray = 80 + Math.floor(buildingRNG() * 40);
+                this.ctx.fillStyle = `rgb(${baseGray},${baseGray},${baseGray})`;
+                this.ctx.fillRect(x, y, this.TILE_SIZE, this.TILE_SIZE);
+                
+                // Add a darker border for depth
+                this.ctx.strokeStyle = '#333';
+                this.ctx.lineWidth = 4;
+                this.ctx.strokeRect(x, y, this.TILE_SIZE, this.TILE_SIZE);
+
+                // Add windows
+                const windowColor = buildingRNG() > 0.3 ? '#FFFF00' : '#444'; // Some lights on
+                this.ctx.fillStyle = windowColor;
+                const windowSize = 8;
+                const windowPadding = 12;
+                for (let wy = y + windowPadding; wy < y + this.TILE_SIZE - windowPadding; wy += windowSize + windowPadding) {
+                     for (let wx = x + windowPadding; wx < x + this.TILE_SIZE - windowPadding; wx += windowSize + windowPadding) {
+                         if(buildingRNG() > 0.1) { // some windows are missing
+                             this.ctx.fillRect(wx, wy, windowSize, windowSize);
+                         }
+                    }
+                }
+            }
+            
+            drawTrees() {
+                const startRow = Math.floor(this.camera.y / this.TILE_SIZE);
+                const endRow = Math.min(this.map.length - 1, Math.ceil((this.camera.y + this.canvas.height) / this.TILE_SIZE));
+                const startCol = Math.floor(this.camera.x / this.TILE_SIZE);
+                const endCol = Math.min(this.map[0].length - 1, Math.ceil((this.camera.x + this.canvas.width) / this.TILE_SIZE));
+
+                for (let row = startRow; row <= endRow; row++) {
+                    for (let col = startCol; col <= endCol; col++) {
+                        if (row < 0 || col < 0 || row >= this.map.length || col >= this.map[0].length) continue;
+
+                        if (this.map[row][col] === 3) {
+                            const x = col * this.TILE_SIZE + this.TILE_SIZE / 2;
+                            const y = row * this.TILE_SIZE + this.TILE_SIZE / 2;
+                            // Trunk
+                            this.ctx.fillStyle = '#654321';
+                            this.ctx.fillRect(x - 5, y - 10, 10, 20);
+                            // Leaves
+                            this.ctx.fillStyle = '#228B22';
+                            this.ctx.beginPath();
+                            this.ctx.arc(x, y - 20, 25, 0, Math.PI * 2);
+                            this.ctx.fill();
+                        }
+                    }
+                }
+            }
+            
+            drawUI() {
+                // Speedometer
+                const speed = Math.abs(this.car.speed * 0.1).toFixed(0);
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = 'bold 24px Arial';
+                this.ctx.textAlign = 'right';
+                this.ctx.fillText(`Speed: ${speed} mph`, this.canvas.width - 20, this.canvas.height - 20);
+                
+                // ADDED CREATOR CREDIT HERE
+                this.ctx.font = '12px Arial';
+                this.ctx.textAlign = 'left';
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                this.ctx.fillText(`Created by Yaroslav Ostapenko`, 10, this.canvas.height - 10);
+            }
+
+            // --- COLLISION DETECTION ---
+            checkCollisions() {
+                const carCol = Math.floor(this.car.x / this.TILE_SIZE);
+                const carRow = Math.floor(this.car.y / this.TILE_SIZE);
+
+                if (carRow >= 0 && carRow < this.map.length && carCol >= 0 && carCol < this.map[0].length) {
+                    const tileType = this.map[carRow][carCol];
+
+                    // Collision with buildings (type 2)
+                    if (tileType === 2) {
+                        this.car.speed = -this.car.speed * 0.5; // Bounce back
+                        
+                        // Move car out of the building tile to prevent getting stuck
+                        const overlapX = this.car.x % this.TILE_SIZE;
+                        const overlapY = this.car.y % this.TILE_SIZE;
+                        const carAngle = this.car.angle;
+
+                        if (Math.abs(Math.cos(carAngle)) > Math.abs(Math.sin(carAngle))) { // More horizontal movement
+                            if(this.car.x > carCol * this.TILE_SIZE + this.TILE_SIZE / 2) {
+                                this.car.x = carCol * this.TILE_SIZE + this.TILE_SIZE + this.car.width/2;
+                            } else {
+                                this.car.x = carCol * this.TILE_SIZE - this.car.width/2;
+                            }
+                        } else { // More vertical movement
+                            if(this.car.y > carRow * this.TILE_SIZE + this.TILE_SIZE / 2) {
+                                this.car.y = carRow * this.TILE_SIZE + this.TILE_SIZE + this.car.height/2;
+                            } else {
+                                this.car.y = carRow * this.TILE_SIZE - this.car.height/2;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- UTILITY FUNCTIONS ---
+            resizeCanvas() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                this.camera.resize(this.canvas.width, this.canvas.height);
+            }
+
+            setupMobileControls() {
+                const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                if (isTouchDevice) {
+                    const controls = document.getElementById('touchControls');
+                    controls.style.display = 'flex';
+                    
+                    const gasBtn = document.getElementById('gasBtn');
+                    const brakeBtn = document.getElementById('brakeBtn');
+                    const leftBtn = document.getElementById('leftBtn');
+                    const rightBtn = document.getElementById('rightBtn');
+
+                    gasBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.input.keys.ArrowUp = true; });
+                    gasBtn.addEventListener('touchend', (e) => { e.preventDefault(); this.input.keys.ArrowUp = false; });
+                    
+                    brakeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.input.keys.ArrowDown = true; });
+                    brakeBtn.addEventListener('touchend', (e) => { e.preventDefault(); this.input.keys.ArrowDown = false; });
+
+                    leftBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.input.keys.ArrowLeft = true; });
+                    leftBtn.addEventListener('touchend', (e) => { e.preventDefault(); this.input.keys.ArrowLeft = false; });
+                    
+                    rightBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.input.keys.ArrowRight = true; });
+                    rightBtn.addEventListener('touchend', (e) => { e.preventDefault(); this.input.keys.ArrowRight = false; });
+                }
+            }
+        }
+        
+        // --- CAR CLASS ---
+        class Car {
+            constructor(x, y, width, height) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+
+                // Physics properties
+                this.speed = 0;
+                this.angle = 0;
+                this.maxSpeed = 400;
+                this.acceleration = 200;
+                this.brakeForce = 400;
+                this.friction = 50;
+                this.turnSpeed = 1.8; // Radians per second
+            }
+
+            update(input, deltaTime) {
+                let moving = false;
+
+                // Acceleration and Braking
+                if (input.isPressed('ArrowUp') || input.isPressed('w')) {
+                    this.speed += this.acceleration * deltaTime;
+                    moving = true;
+                }
+                if (input.isPressed('ArrowDown') || input.isPressed('s')) {
+                    this.speed -= this.brakeForce * deltaTime;
+                    moving = true;
+                }
+
+                // Apply friction
+                if (!moving) {
+                    if (this.speed > 0) {
+                        this.speed -= this.friction * deltaTime;
+                        if (this.speed < 0) this.speed = 0;
+                    } else if (this.speed < 0) {
+                        this.speed += this.friction * deltaTime;
+                        if (this.speed > 0) this.speed = 0;
+                    }
+                }
+
+                // Clamp speed to max speed
+                if (this.speed > this.maxSpeed) this.speed = this.maxSpeed;
+                if (this.speed < -this.maxSpeed / 2) this.speed = -this.maxSpeed / 2; // Slower reverse
+
+                // Turning (only when moving)
+                if (Math.abs(this.speed) > 5) {
+                    const turnDirection = this.speed > 0 ? 1 : -1;
+                    if (input.isPressed('ArrowLeft') || input.isPressed('a')) {
+                        this.angle -= this.turnSpeed * deltaTime * turnDirection;
+                    }
+                    if (input.isPressed('ArrowRight') || input.isPressed('d')) {
+                        this.angle += this.turnSpeed * deltaTime * turnDirection;
+                    }
+                }
+
+                // Update position
+                this.x += Math.cos(this.angle) * this.speed * deltaTime;
+                this.y += Math.sin(this.angle) * this.speed * deltaTime;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // Car Body
+                ctx.fillStyle = '#ffcc00'; // Taxi Yellow
+                ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+                
+                // Car Roof
+                ctx.fillStyle = '#e6b800';
+                ctx.fillRect(-this.width / 2 + 5, -this.height / 2, this.width - 20, this.height);
+
+                // Windshield
+                ctx.fillStyle = '#66ccff'; // Light blue
+                ctx.fillRect(this.width / 4, -this.height / 2, this.width / 4, this.height);
+                
+                // Headlights
+                ctx.fillStyle = 'white';
+                ctx.fillRect(this.width/2 - 2, -this.height/2 + 3, 4, 6);
+                ctx.fillRect(this.width/2 - 2, this.height/2 - 9, 4, 6);
+
+                ctx.restore();
+            }
+        }
+        
+        // --- CAMERA CLASS ---
+        class Camera {
+            constructor(viewportWidth, viewportHeight, worldWidth, worldHeight) {
+                this.x = 0;
+                this.y = 0;
+                this.viewportWidth = viewportWidth;
+                this.viewportHeight = viewportHeight;
+                this.worldWidth = worldWidth;
+                this.worldHeight = worldHeight;
+            }
+
+            update(targetX, targetY) {
+                // Center the camera on the target (the car)
+                this.x = targetX - this.viewportWidth / 2;
+                this.y = targetY - this.viewportHeight / 2;
+
+                // Clamp camera to world boundaries
+                this.x = Math.max(0, Math.min(this.x, this.worldWidth - this.viewportWidth));
+                this.y = Math.max(0, Math.min(this.y, this.worldHeight - this.viewportHeight));
+            }
+
+            resize(newWidth, newHeight) {
+                this.viewportWidth = newWidth;
+                this.viewportHeight = newHeight;
+            }
+        }
+        
+        // --- INPUT HANDLER CLASS ---
+        class InputHandler {
+            constructor() {
+                this.keys = {};
+                window.addEventListener('keydown', (e) => this.keys[e.key] = true);
+                window.addEventListener('keyup', (e) => this.keys[e.key] = false);
+            }
+
+            isPressed(key) {
+                return this.keys[key] || false;
+            }
+        }
+
+        /**
+         * A simple seeded pseudo-random number generator.
+         * Used to generate consistent "random" features for buildings.
+         * From: https://stackoverflow.com/a/47593316/1601914
+         */
+        Math.seedrandom = function(seed) {
+            var m_w = (seed * 9301 + 49297) % 233280;
+            var m_z = (seed * 49297 + 9301) % 233280;
+            return function() {
+                m_z = (36969 * (m_z & 65535) + (m_z >> 16)) & 0xffffffff;
+                m_w = (18000 * (m_w & 65535) + (m_w >> 16)) & 0xffffffff;
+                var result = ((m_z << 16) + m_w) & 0xffffffff;
+                result /= 4294967296;
+                return result + 0.5;
+            }
+        };
+
+    </script>
+</body>
+</html>
