@@ -1,6 +1,5 @@
 {
-  "name": "AI City Monopoly",
-  "description": "A 2D Monopoly-style board game where you compete against an AI to buy and develop cities from around the world. Built for mobile-first experience.",
-  "requestFramePermissions": [],
-  "prompt": ""
+  "name": "Research Visualization",
+  "description": "Research paper reimagined as an elegant, interactive narrative site.",
+  "requestFramePermissions": []
 }
